@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "QY Workforce",
+    "slug": "qy-workforce",
+    "scheme": "qyworkforce",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.qyventures.workforce",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "QY Workforce uses your location to verify attendance at assigned work sites."
+      }
+    },
+    "android": {
+      "package": "com.qyventures.workforce",
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+    },
+    "plugins": ["expo-router", "expo-secure-store", "expo-location"],
+    "extra": {
+      "environment": "development"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+.next/
+dist/
+build/
+coverage/
+
+# local environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+
+# Supabase local
+.supabase/
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# logs
+*.log
+logs/
+
+# test artifacts
+playwright-report/
+test-results/

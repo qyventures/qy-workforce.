@@ -12,7 +12,7 @@ begin
      (old.latitude, old.longitude, old.geofence_radius_m)
   then
     if auth.uid() is not null
-       and coalesce(current_setting('app.geofence_change_authorized', true), '') <> '1'
+       and coalesce(current_setting('app.geofence_change_authorized', true), '') <> old.id::text
     then
       raise exception 'site geofence changes must use update_site_geofence';
     end if;
@@ -78,14 +78,16 @@ begin
     raise exception 'site not found';
   end if;
 
-  -- Authorise the trigger only for this transaction-local RPC execution.
-  perform set_config('app.geofence_change_authorized', '1', true);
+  -- Authorise exactly this site for the duration of the guarded UPDATE only.
+  perform set_config('app.geofence_change_authorized', p_site_id::text, true);
 
   update public.sites
   set latitude = p_latitude,
       longitude = p_longitude,
       geofence_radius_m = p_radius_m
   where id = p_site_id;
+
+  perform set_config('app.geofence_change_authorized', '', true);
 
   insert into public.audit_events(actor_id, action, entity_type, entity_id, metadata)
   values (

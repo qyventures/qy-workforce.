@@ -5,7 +5,7 @@ create table if not exists public.payroll_batches (
   period_start date not null,
   period_end date not null,
   status text not null default 'draft' check (status in ('draft','locked','exported','cancelled')),
-  created_by uuid not null references auth.users(id),
+  created_by uuid not null references public.profiles(id),
   locked_at timestamptz,
   exported_at timestamptz,
   created_at timestamptz not null default now(),
@@ -26,18 +26,18 @@ alter table public.payroll_batches enable row level security;
 alter table public.payroll_batch_items enable row level security;
 
 create policy payroll_batches_finance_read on public.payroll_batches
-for select using (public.has_app_role(array['admin','ops','finance','auditor']));
+for select using (public.current_app_role() in ('admin','ops_manager','finance','auditor'));
 
 create policy payroll_batches_finance_write on public.payroll_batches
-for all using (public.has_app_role(array['admin','finance']))
-with check (public.has_app_role(array['admin','finance']));
+for all using (public.current_app_role() in ('admin','finance'))
+with check (public.current_app_role() in ('admin','finance'));
 
 create policy payroll_items_finance_read on public.payroll_batch_items
-for select using (public.has_app_role(array['admin','ops','finance','auditor']));
+for select using (public.current_app_role() in ('admin','ops_manager','finance','auditor'));
 
 create policy payroll_items_finance_write on public.payroll_batch_items
-for all using (public.has_app_role(array['admin','finance']))
-with check (public.has_app_role(array['admin','finance']));
+for all using (public.current_app_role() in ('admin','finance'))
+with check (public.current_app_role() in ('admin','finance'));
 
 create or replace function public.create_payroll_batch(p_start date, p_end date)
 returns uuid
@@ -48,22 +48,18 @@ as $$
 declare
   v_batch uuid;
 begin
-  if not public.has_app_role(array['admin','finance']) then
+  if public.current_app_role() not in ('admin','finance') then
     raise exception 'not authorised';
   end if;
-
-  if p_end < p_start then
-    raise exception 'invalid pay period';
-  end if;
+  if p_end < p_start then raise exception 'invalid pay period'; end if;
 
   insert into public.payroll_batches(period_start, period_end, created_by)
   values (p_start, p_end, auth.uid()) returning id into v_batch;
 
   insert into public.payroll_batch_items(payroll_batch_id, timesheet_id, gross_pay)
-  select v_batch, t.id,
-         round((greatest(coalesce(t.payable_minutes,0),0)::numeric / 60.0) * coalesce(s.worker_rate,0), 2)
+  select v_batch, t.id, round(coalesce(t.worker_amount,0), 2)
   from public.timesheets t
-  join public.shift_assignments sa on sa.id = t.shift_assignment_id
+  join public.shift_assignments sa on sa.id = t.assignment_id
   join public.shifts s on s.id = sa.shift_id
   where t.status = 'approved'
     and s.starts_at::date between p_start and p_end
@@ -73,9 +69,9 @@ begin
       where pbi.timesheet_id = t.id and pb.status in ('locked','exported')
     );
 
-  insert into public.audit_events(actor_user_id, action, entity_type, entity_id, metadata)
-  values (auth.uid(), 'payroll_batch_created', 'payroll_batch', v_batch, jsonb_build_object('period_start',p_start,'period_end',p_end));
-
+  insert into public.audit_events(actor_id, action, entity_type, entity_id, metadata)
+  values (auth.uid(), 'payroll_batch.created', 'payroll_batch', v_batch,
+          jsonb_build_object('period_start',p_start,'period_end',p_end));
   return v_batch;
 end;
 $$;
@@ -87,12 +83,20 @@ security definer
 set search_path = public
 as $$
 begin
-  if not public.has_app_role(array['admin','finance']) then raise exception 'not authorised'; end if;
+  if public.current_app_role() not in ('admin','finance') then raise exception 'not authorised'; end if;
   update public.payroll_batches set status='locked', locked_at=now()
   where id=p_batch and status='draft';
   if not found then raise exception 'batch not found or not draft'; end if;
-  insert into public.audit_events(actor_user_id, action, entity_type, entity_id)
-  values (auth.uid(),'payroll_batch_locked','payroll_batch',p_batch);
+
+  update public.timesheets t
+  set status='payroll_ready', payroll_ready_at=coalesce(payroll_ready_at,now()), updated_at=now()
+  where exists (
+    select 1 from public.payroll_batch_items pbi
+    where pbi.payroll_batch_id=p_batch and pbi.timesheet_id=t.id
+  ) and t.status='approved';
+
+  insert into public.audit_events(actor_id, action, entity_type, entity_id)
+  values (auth.uid(),'payroll_batch.locked','payroll_batch',p_batch);
 end;
 $$;
 
@@ -103,15 +107,18 @@ security definer
 set search_path = public
 as $$
 begin
-  if not public.has_app_role(array['admin','finance']) then raise exception 'not authorised'; end if;
+  if public.current_app_role() not in ('admin','finance') then raise exception 'not authorised'; end if;
   update public.payroll_batches set status='exported', exported_at=now()
   where id=p_batch and status='locked';
   if not found then raise exception 'batch not found or not locked'; end if;
-  insert into public.audit_events(actor_user_id, action, entity_type, entity_id)
-  values (auth.uid(),'payroll_batch_exported','payroll_batch',p_batch);
+  insert into public.audit_events(actor_id, action, entity_type, entity_id)
+  values (auth.uid(),'payroll_batch.exported','payroll_batch',p_batch);
 end;
 $$;
 
+revoke all on function public.create_payroll_batch(date,date) from public;
+revoke all on function public.lock_payroll_batch(uuid) from public;
+revoke all on function public.mark_payroll_batch_exported(uuid) from public;
 grant execute on function public.create_payroll_batch(date,date) to authenticated;
 grant execute on function public.lock_payroll_batch(uuid) to authenticated;
 grant execute on function public.mark_payroll_batch_exported(uuid) to authenticated;

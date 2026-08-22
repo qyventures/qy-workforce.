@@ -104,4 +104,12 @@ jobs:
             grep -q 'revoke all on function public.enforce_audit_metadata_minimisation() from anon, authenticated' supabase/migrations/0024_audit_metadata_minimisation.sql
             test -f supabase/tests/audit_metadata_minimisation_checks.sql
           fi
+          if test -f supabase/migrations/0025_site_geofence_change_control.sql; then
+            grep -q 'sites_geofence_change_guard' supabase/migrations/0025_site_geofence_change_control.sql
+            grep -q 'public.is_ops()' supabase/migrations/0025_site_geofence_change_control.sql
+            grep -q 'change reason required' supabase/migrations/0025_site_geofence_change_control.sql
+            grep -q 'site.geofence_changed' supabase/migrations/0025_site_geofence_change_control.sql
+            grep -q 'revoke all on function public.update_site_geofence(uuid,numeric,numeric,integer,text) from public' supabase/migrations/0025_site_geofence_change_control.sql
+            test -f supabase/tests/site_geofence_change_control_checks.sql
+          fi
           echo 'Critical workforce security invariants present.'

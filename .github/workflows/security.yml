@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   secret-scan:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,7 +22,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   dependency-and-sbom:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Generate SBOM
@@ -41,7 +41,7 @@ jobs:
           ignore-unfixed: true
 
   sast:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Semgrep
@@ -50,7 +50,7 @@ jobs:
           semgrep scan --config p/owasp-top-ten --config p/secrets --error .
 
   sql-safety:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Reject obvious unsafe migration patterns

@@ -14,6 +14,16 @@ The database stores only normalized verification outcomes and hashes needed for 
 
 Deployability remains server-authoritative. Worker clients may express role interests and submit consent, but cannot self-approve role, vetting, training, identity, residency, eligibility or deployability state.
 
+## Shift demand lifecycle
+
+Demand creation is server-authoritative. `clients`, `sites`, `roles` and `shifts` have RLS enabled, and anonymous/authenticated clients have no direct INSERT/UPDATE/DELETE privileges on those tables.
+
+`create_shift_draft(...)` is restricted to Ops Manager/Admin and validates active client/site/role state, timing, headcount and rate safety bounds before creating a shift in `draft` status. The audit event records operational metadata and a low-margin flag without worker PII.
+
+Publishing is deliberately separate. `open_shift(shift_id)` can transition only a future `draft` shift to `open`, revalidates client/site/role activity under a row lock, and writes an audit event. Workers never publish demand directly; they discover eligible open shifts through the scoped worker feed and accept through the capacity-safe acceptance RPC.
+
+The current 10% margin threshold is an operational warning, not a database hard-stop. This avoids silently changing commercial policy while still surfacing low-margin demand for Ops review.
+
 ## Attendance and timesheets
 
 Clock events are tied to an accepted assignment and validated server-side against the authoritative site geofence and timing window. Clock-out creates/updates a draft timesheet. Supervisor/Ops review is site-scoped and produces auditable approve/reject transitions.
@@ -32,4 +42,4 @@ Retention periods are registry-driven and intentionally reviewable before produc
 
 ## Staging validation
 
-After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions, absence of raw token/national-ID columns, separation of identity/residency/eligibility fields, required SECURITY DEFINER boundaries and the identity retention policy.
+After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions and demand tables, absence of raw token/national-ID columns, separation of identity/residency/eligibility fields, required SECURITY DEFINER boundaries, no direct authenticated shift-write privileges, and the identity retention policy.

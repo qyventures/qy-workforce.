@@ -1,1 +1,2 @@
-trigger 2026-08-22T12:22+08:00
+trigger 2026-08-22T22:38+08:00
+purpose verify-self-hosted-runner

@@ -7,6 +7,7 @@ const nav = [
   { href: '/ops/workers', label: 'Workers' },
   { href: '/ops/clients', label: 'Clients & Sites' },
   { href: '/ops/exceptions', label: 'Exceptions' },
+  { href: '/ops/approvals', label: 'Approvals' },
   { href: '/ops/timesheets', label: 'Timesheets' },
   { href: '/ops/payroll', label: 'Payroll' },
 ];

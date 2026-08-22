@@ -4,6 +4,7 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 const cards = [
   { title: 'Find shifts', body: 'Browse eligible jobs matched to your verified roles and skills.', href: '/shifts' as const },
   { title: 'My shifts', body: 'See accepted work, attendance status and submitted timesheets.', href: '/my-shifts' as const },
+  { title: 'Earnings', body: 'Track estimated earnings and timesheet payment status in one place.', href: '/earnings' as const },
   { title: 'Clock in / out', body: 'Verify attendance at the assigned site using geofenced location.', href: '/attendance' as const },
   { title: 'Readiness', body: 'See identity, eligibility, role, vetting, training and consent checks in one place.', href: '/readiness' as const },
   { title: 'Profile & training', body: 'Complete onboarding, verification, certificates and required training.', href: '/onboarding' as const },
@@ -24,7 +25,7 @@ export default function HomeScreen() {
         </View>
 
         {cards.map((card) => (
-          <Link key={card.title} href={card.href} style={styles.card}>
+          <Link key={card.title} href={card.href} style={styles.card} accessibilityLabel={`${card.title}. ${card.body}`}>
             <View>
               <Text style={styles.cardTitle}>{card.title}</Text>
               <Text style={styles.cardBody}>{card.body}</Text>
@@ -39,7 +40,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#0A0A0A' },
-  container: { padding: 24, gap: 16 },
+  container: { padding: 24, gap: 16, paddingBottom: 48 },
   eyebrow: { color: '#A3A3A3', fontSize: 12, letterSpacing: 2 },
   title: { color: '#FFFFFF', fontSize: 34, fontWeight: '700', lineHeight: 40 },
   subtitle: { color: '#D4D4D4', fontSize: 17, lineHeight: 25, marginBottom: 8 },

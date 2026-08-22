@@ -4,8 +4,10 @@ set -euo pipefail
 ROLE="${1:?role required}"
 BRANCH="${2:?branch required}"
 BASE_DIR="${RUNNER_TEMP:-/tmp}/qy-workforce-agent-farm"
-WORKTREE="$BASE_DIR/$ROLE"
-mkdir -p "$BASE_DIR"
+REPO_DIR="$BASE_DIR/repos/$ROLE"
+SOURCE_REPO="${GITHUB_WORKSPACE:?GITHUB_WORKSPACE required}"
+REMOTE_URL="$(git -C "$SOURCE_REPO" remote get-url origin)"
+mkdir -p "$BASE_DIR/repos"
 
 case "$ROLE" in
   mobile)
@@ -29,16 +31,21 @@ case "$ROLE" in
   *) echo "unknown role: $ROLE" >&2; exit 2 ;;
 esac
 
-cd "$GITHUB_WORKSPACE"
-git fetch origin main "$BRANCH" 2>/dev/null || git fetch origin main
-rm -rf "$WORKTREE"
+# Use one independent local clone per role. This avoids shared-ref/worktree lock races
+# when multiple VPS agents fetch/rebase concurrently.
+if [ ! -d "$REPO_DIR/.git" ]; then
+  rm -rf "$REPO_DIR"
+  git clone --no-tags "$REMOTE_URL" "$REPO_DIR"
+fi
+cd "$REPO_DIR"
+git remote set-url origin "$REMOTE_URL"
+git fetch --no-tags origin main "$BRANCH" 2>/dev/null || git fetch --no-tags origin main
+
 if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
-  git worktree add -B "$BRANCH" "$WORKTREE" "origin/$BRANCH"
-  cd "$WORKTREE"
+  git checkout -B "$BRANCH" "origin/$BRANCH"
   git rebase origin/main || { git rebase --abort || true; git reset --hard origin/main; }
 else
-  git worktree add -b "$BRANCH" "$WORKTREE" origin/main
-  cd "$WORKTREE"
+  git checkout -B "$BRANCH" origin/main
 fi
 
 git config user.name "QY Workforce VPS Agent"
@@ -49,12 +56,28 @@ HELP="$(codex exec --help 2>&1 || true)"
 if grep -q -- '--full-auto' <<<"$HELP"; then CODEX+=(--full-auto); fi
 if grep -q -- '--sandbox' <<<"$HELP"; then CODEX+=(--sandbox workspace-write); fi
 
-printf '%s\n' "$PROMPT" | timeout 35m "${CODEX[@]}" - || true
+CODEX_LOG="$(mktemp)"
+set +e
+printf '%s\n' "$PROMPT" | timeout 35m "${CODEX[@]}" - 2>&1 | tee "$CODEX_LOG"
+CODEX_RC=${PIPESTATUS[1]}
+set -e
+
+if grep -qi "hit your usage limit" "$CODEX_LOG"; then
+  echo "CODEX_USAGE_LIMITED=1"
+  rm -f "$CODEX_LOG"
+  exit 75
+fi
+rm -f "$CODEX_LOG"
+
+# A model/tool failure should not accidentally commit partial edits.
+if [ "$CODEX_RC" -ne 0 ]; then
+  echo "codex exited with status $CODEX_RC; leaving branch unchanged" >&2
+  git reset --hard HEAD
+  exit "$CODEX_RC"
+fi
 
 git add -A
 if ! git diff --cached --quiet; then
   git commit -m "vps($ROLE): autonomous pilot-readiness progress"
   git push origin "HEAD:$BRANCH"
 fi
-
-git worktree remove "$WORKTREE" --force || true

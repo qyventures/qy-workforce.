@@ -116,6 +116,7 @@ export default function RootLayout() {
         <Stack.Screen name="assignment" options={{ title: 'Shift details' }} />
         <Stack.Screen name="attendance" options={{ title: 'Attendance' }} />
         <Stack.Screen name="earnings" options={{ title: 'Earnings' }} />
+        <Stack.Screen name="notifications" options={{ title: 'Updates' }} />
       </Stack>
     </>
   );

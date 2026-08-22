@@ -46,6 +46,14 @@ Only Finance/Admin can create, lock or export payroll batches. A batch contains 
 
 The older `site_margin_summary` view is no longer directly selectable by the authenticated role; privileged reporting should use the RPC so application-role authorization is enforced at the server boundary.
 
+## Ops web surfaces
+
+The Ops worker-review queue uses `get_worker_review_queue(...)`, which returns a deterministic operational alias and readiness counts rather than a name or verification evidence. Status actions use `set_worker_operational_status(...)`; the database blocks self-review, requires a reason for suspension/rejection, checks deployability prerequisites and records the event.
+
+Shift demand is read under privileged RLS, while creation and publication use `create_shift_draft(...)` and `open_shift(...)`. The browser may preview estimated margin, but rate, status, timing, client/site/role activity and audit logging are always validated server-side.
+
+The Ops margin-report page uses only `get_site_margin_report(...)`. It presents approved-timesheet aggregates by client/site and must not be extended with worker names, worker references, individual pay rates or export capabilities.
+
 ## Retention and privacy requests
 
 Retention periods are registry-driven and intentionally reviewable before production. Identity verification storage is limited to normalized outcomes/evidence metadata; unnecessary raw identity data should not be retained.

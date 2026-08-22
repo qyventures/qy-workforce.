@@ -8,6 +8,10 @@ The database stores only normalized verification outcomes and hashes needed for 
 
 `start_identity_session` supports only `mock` and `staging` environments. Production completion is intentionally disabled until production credentials, redirect URIs, privacy review and operational approval are in place.
 
+Identity sessions are short-lived and single-active per worker/provider/environment. Starting a new flow expires stale sessions and rejects overlapping live sessions to reduce callback confusion and replay risk. State and nonce values must be supplied as sufficiently long hashes rather than raw secrets.
+
+`mark_identity_callback_received_staging`, `fail_identity_session_staging` and `expire_identity_sessions` provide explicit, audited lifecycle transitions. The bulk expiry RPC is intended for service-role scheduling, while Ops/Admin can perform staging operational recovery. Production callback handling remains disabled.
+
 `complete_identity_verification_staging` is an Ops/Admin boundary. It records the identity outcome independently from residency and work eligibility and writes an audit event.
 
 ## Worker readiness
@@ -28,6 +32,8 @@ The current 10% margin threshold is an operational warning, not a database hard-
 
 Clock events are tied to an accepted assignment and validated server-side against the authoritative site geofence and timing window. Clock-out creates/updates a draft timesheet. Supervisor/Ops review is site-scoped and produces auditable approve/reject transitions.
 
+Authenticated clients no longer have direct INSERT/UPDATE/DELETE privileges on `time_events` or `timesheets`; attendance and timesheet state changes must use the audited server RPCs. This prevents a modified client from fabricating geofence outcomes, payable minutes or approval/payroll state through direct table writes.
+
 ## Payroll
 
 Only Finance/Admin can create, lock or export payroll batches. A batch contains approved timesheets only. Locking a batch moves its included timesheets to `payroll_ready`. Export requires a locked batch and records format/count/checksum in the audit trail. Payment-rail credentials and bank credentials remain outside this database.
@@ -36,10 +42,12 @@ Only Finance/Admin can create, lock or export payroll batches. A batch contains 
 
 `get_site_margin_report(start,end)` is restricted to Ops Manager, Finance, Admin and Auditor. It aggregates worker cost, client revenue and gross margin by client/site without returning worker identity fields.
 
+The older `site_margin_summary` view is no longer directly selectable by the authenticated role; privileged reporting should use the RPC so application-role authorization is enforced at the server boundary.
+
 ## Retention
 
 Retention periods are registry-driven and intentionally reviewable before production. Identity verification storage is limited to normalized outcomes/evidence metadata; unnecessary raw identity data should not be retained.
 
 ## Staging validation
 
-After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions and demand tables, absence of raw token/national-ID columns, separation of identity/residency/eligibility fields, required SECURITY DEFINER boundaries, no direct authenticated shift-write privileges, and the identity retention policy.
+After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions and demand tables, absence of raw token/national-ID columns, separation of identity/residency/eligibility fields, required SECURITY DEFINER boundaries, no direct authenticated mutation privileges for shifts/attendance/timesheets, no broad margin-view access, single-active identity-session enforcement, and the identity retention policy.

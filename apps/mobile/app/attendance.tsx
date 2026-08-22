@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
+import { attendanceState, clockErrorMessage, formatRecordedPay } from '../lib/attendance.mjs';
 import { isLikelyNetworkError, mobileErrorMessage } from '../lib/errors';
 import { supabase } from '../lib/supabase';
 
@@ -57,7 +58,7 @@ export default function AttendanceScreen() {
       if (!data) throw new Error('This assignment is not available.');
       const next = data as AttendanceDetails;
       setDetails(next);
-      setState(next.clock_out_at ? 'clocked-out' : next.clock_in_at ? 'clocked-in' : 'idle');
+      setState(attendanceState(next));
     } catch (error) {
       setLoadError(mobileErrorMessage(error, 'This assignment is not available.'));
     } finally {
@@ -79,7 +80,7 @@ export default function AttendanceScreen() {
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
       if (permission.status !== 'granted') {
-        setState(details.clock_in_at ? 'clocked-in' : 'idle');
+        setState(attendanceState(details));
         Alert.alert('Location required', 'QY Workforce uses your foreground location only when you tap clock in or clock out.');
         return;
       }
@@ -96,17 +97,14 @@ export default function AttendanceScreen() {
       });
 
       if (error) {
-        setState(details.clock_in_at ? 'clocked-in' : 'idle');
+        setState(attendanceState(details));
         if (isLikelyNetworkError(error)) {
           setLoadError('Connection interrupted. Refresh attendance status before trying the clock action again.');
           Alert.alert('Could not confirm attendance', 'The connection dropped while saving your clock event. Do not retry immediately. Refresh this screen first to check whether the server recorded it.');
           return;
         }
-        const message = error.message.includes('outside approved worksite geofence')
-          ? 'You are outside the approved worksite area. Move closer to the worksite and try again.'
-          : error.message.includes('location accuracy insufficient')
-            ? 'Your location is not accurate enough yet. Move to an open area and try again.'
-            : mobileErrorMessage(error, 'The clock event could not be recorded.');
+        const message = clockErrorMessage(error.message)
+          ?? mobileErrorMessage(error, 'The clock event could not be recorded.');
         Alert.alert('Clock event not recorded', message);
         return;
       }
@@ -116,7 +114,7 @@ export default function AttendanceScreen() {
       await load(true);
       if (action === 'out') Alert.alert('Shift completed', 'Your attendance was recorded and a draft timesheet was created for review.');
     } catch (error) {
-      setState(details.clock_in_at ? 'clocked-in' : 'idle');
+      setState(attendanceState(details));
       if (isLikelyNetworkError(error)) {
         setLoadError('You may be offline. Reconnect and refresh attendance status before trying again.');
         Alert.alert('Connection interrupted', 'We could not confirm whether the clock event reached the server. Reconnect and refresh this screen before retrying.');
@@ -149,7 +147,7 @@ export default function AttendanceScreen() {
     <View style={styles.timeCard}><Text style={styles.date}>{shiftDate}</Text><Text style={styles.status}>{isWorking ? 'You are clocked in' : state === 'clocked-out' ? 'Shift completed' : 'Ready to clock in'}</Text>{details.clock_in_at && <Text style={styles.distance}>Clocked in: {new Date(details.clock_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>}{details.clock_out_at && <Text style={styles.distance}>Clocked out: {new Date(details.clock_out_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>}{distanceM !== null && <Text style={styles.distance}>Last verified worksite distance: {distanceM}m</Text>}</View>
     <View style={styles.privacyCard}><Text style={styles.privacyTitle}>Location privacy</Text><Text style={styles.privacyBody}>Location is requested only when you tap clock in or clock out. QY Workforce does not continuously track your location in the background.</Text></View>
     {state !== 'clocked-out' && <Pressable accessibilityRole="button" accessibilityLabel={isWorking ? 'Verify location and clock out' : 'Verify location and clock in'} accessibilityState={{ disabled: state === 'locating' || refreshingState || Boolean(loadError) }} disabled={state === 'locating' || refreshingState || Boolean(loadError)} style={[styles.primaryButton, isWorking && styles.outButton, (state === 'locating' || refreshingState || Boolean(loadError)) && styles.disabledButton]} onPress={() => verifyAndRecord(isWorking ? 'out' : 'in')}><Text style={styles.primaryButtonText}>{state === 'locating' ? 'Verifying location…' : isWorking ? 'Verify location & clock out' : 'Verify location & clock in'}</Text></Pressable>}
-    {state === 'clocked-out' && <View style={styles.completeCard}><Text style={styles.completeTitle}>Attendance captured</Text><Text style={styles.completeBody}>{details.timesheet ? `${Math.floor(details.timesheet.payable_minutes / 60)}h ${details.timesheet.payable_minutes % 60}m recorded · Est. S$${Number(details.timesheet.worker_amount ?? 0).toFixed(2)} · ${details.timesheet.status}` : 'A draft timesheet is being prepared.'}</Text><Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={() => router.replace('/my-shifts')}><Text style={styles.secondaryButtonText}>View My Shifts</Text></Pressable></View>}
+    {state === 'clocked-out' && <View style={styles.completeCard}><Text style={styles.completeTitle}>Attendance captured</Text><Text style={styles.completeBody}>{formatRecordedPay(details.timesheet)}</Text><Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={() => router.replace('/my-shifts')}><Text style={styles.secondaryButtonText}>View My Shifts</Text></Pressable></View>}
     <Text style={styles.note}>The server validates worksite geofence, GPS accuracy, event order and shift timing before accepting attendance. Supervisor approval is still required before payroll.</Text>
   </View>;
 }

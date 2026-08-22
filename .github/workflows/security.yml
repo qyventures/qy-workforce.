@@ -112,4 +112,13 @@ jobs:
             grep -q 'revoke all on function public.update_site_geofence(uuid,numeric,numeric,integer,text) from public' supabase/migrations/0025_site_geofence_change_control.sql
             test -f supabase/tests/site_geofence_change_control_checks.sql
           fi
+          if test -f supabase/migrations/0026_privacy_request_state_machine.sql; then
+            grep -q 'invalid privacy request transition' supabase/migrations/0026_privacy_request_state_machine.sql
+            grep -q 'privacy request is terminal' supabase/migrations/0026_privacy_request_state_machine.sql
+            grep -q 'reason required when changing retention hold' supabase/migrations/0026_privacy_request_state_machine.sql
+            grep -q 'completion reason required for erasure' supabase/migrations/0026_privacy_request_state_machine.sql
+            grep -q 'privacy_request.transitioned' supabase/migrations/0026_privacy_request_state_machine.sql
+            grep -q 'revoke all on function public.review_privacy_request(uuid,text,text,boolean) from public' supabase/migrations/0026_privacy_request_state_machine.sql
+            test -f supabase/tests/privacy_request_state_machine_checks.sql
+          fi
           echo 'Critical workforce security invariants present.'

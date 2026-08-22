@@ -12,11 +12,16 @@ import {
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { isLikelyNetworkError, mobileErrorMessage } from '../lib/errors';
+import {
+  MAX_EMAIL_LENGTH,
+  MAX_INTERESTS,
+  MAX_NAME_LENGTH,
+  canSubmitOnboarding,
+  isValidOptionalEmail,
+  normalizeEmail,
+} from '../lib/onboarding.mjs';
 
 const POLICY_VERSION = '2026-08-22';
-const MAX_NAME_LENGTH = 120;
-const MAX_EMAIL_LENGTH = 254;
-const MAX_INTERESTS = 5;
 const WORK_INTERESTS = [
   { label: 'Hospitality', code: 'banquet' },
   { label: 'F&B Service', code: 'fnb_service' },
@@ -26,17 +31,6 @@ const WORK_INTERESTS = [
   { label: 'Promoter', code: 'promoter' },
   { label: 'Events', code: 'event_crew' },
 ];
-
-function normalizeEmail(value: string): string {
-  return value.trim().toLowerCase();
-}
-
-function isValidOptionalEmail(value: string): boolean {
-  const email = normalizeEmail(value);
-  if (!email) return true;
-  if (email.length > MAX_EMAIL_LENGTH) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
 
 export default function OnboardingScreen() {
   const [fullName, setFullName] = useState('');
@@ -49,14 +43,14 @@ export default function OnboardingScreen() {
   const trimmedName = fullName.trim();
   const emailValid = isValidOptionalEmail(email);
   const canContinue = useMemo(
-    () => trimmedName.length >= 2
-      && trimmedName.length <= MAX_NAME_LENGTH
-      && emailValid
-      && selected.length > 0
-      && selected.length <= MAX_INTERESTS
-      && consented
-      && !submitting,
-    [trimmedName, emailValid, selected, consented, submitting]
+    () => canSubmitOnboarding({
+      fullName,
+      email,
+      selectedInterests: selected,
+      consented,
+      submitting,
+    }),
+    [fullName, email, selected, consented, submitting]
   );
 
   function toggleInterest(code: string) {

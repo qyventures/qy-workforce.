@@ -53,7 +53,7 @@ export default function HomePage() {
       </section>
 
       <footer style={{maxWidth:1180,margin:'0 auto',padding:'28px 24px 44px',borderTop:'1px solid #222',display:'flex',gap:18,flexWrap:'wrap',fontSize:14}}>
-        <a href="/industries" style={{color:'#aaa'}}>Industries</a><a href="/trust" style={{color:'#aaa'}}>Trust & Compliance</a><a href="/privacy" style={{color:'#aaa'}}>Privacy</a><a href="/terms" style={{color:'#aaa'}}>Terms</a>
+        <a href="/how-it-works" data-analytics-event="footer_how_it_works" style={{color:'#aaa'}}>How it works</a><a href="/industries" style={{color:'#aaa'}}>Industries</a><a href="/trust" style={{color:'#aaa'}}>Trust & Compliance</a><a href="/privacy" style={{color:'#aaa'}}>Privacy</a><a href="/terms" style={{color:'#aaa'}}>Terms</a>
       </footer>
     </main>
   );

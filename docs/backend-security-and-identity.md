@@ -18,6 +18,12 @@ Identity sessions are short-lived and single-active per worker/provider/environm
 
 Deployability remains server-authoritative. Worker clients may express role interests and submit consent, but cannot self-approve role, vetting, training, identity, residency, eligibility or deployability state.
 
+The stored `worker_profiles.status='deployable'` is treated as the final Ops deployment gate, not as a cached guarantee of continuing eligibility. `worker_has_deployment_prerequisites(worker_id)` evaluates the live prerequisites independently: identity verified, residency verified, work eligibility explicitly `eligible`, at least one approved active role, no pending/failed/manual-review vetting records, all active global/role-required training passed and unexpired, and current identity/work-eligibility/location-clock consent.
+
+`worker_is_deployable(worker_id)` requires both the Ops `deployable` status and those live prerequisites. The mobile readiness RPC, worker shift feed and `accept_shift(...)` all use this same predicate. As a result, a consent withdrawal, eligibility downgrade, new vetting exception or training expiry removes shift discovery/acceptance immediately even if the stored Ops status has not yet been changed.
+
+Training freshness is evaluated from `worker_training.expires_at` at read/accept time. A role cannot be used to satisfy readiness when the role itself is inactive. This avoids stale deployment decisions without requiring a scheduled job merely to keep a cached boolean current.
+
 ## Shift demand lifecycle
 
 Demand creation is server-authoritative. `clients`, `sites`, `roles` and `shifts` have RLS enabled, and anonymous/authenticated clients have no direct INSERT/UPDATE/DELETE privileges on those tables.
@@ -26,7 +32,7 @@ Demand creation is server-authoritative. `clients`, `sites`, `roles` and `shifts
 
 Publishing is deliberately separate. `open_shift(shift_id)` can transition only a future `draft` shift to `open`, revalidates client/site/role activity under a row lock, and writes an audit event. Workers never publish demand directly; they discover eligible open shifts through the scoped worker feed and accept through the capacity-safe acceptance RPC.
 
-`accept_shift(shift_id)` now applies two transaction-level concurrency controls. The target shift row is locked before capacity is counted, which serializes concurrent acceptance attempts for the same shift and prevents headcount oversubscription. A worker-specific advisory transaction lock serializes concurrent acceptance attempts by the same worker even when the requests target different shifts. The RPC then rejects any active assignment whose time range overlaps the target shift, rejects shifts that have already started, re-checks deployability and role approval, and writes an audit event only after the assignment is safely committed. Adjacent shifts are allowed when one ends exactly when the next begins.
+`accept_shift(shift_id)` applies transaction-level concurrency controls. The target shift row is locked before capacity is counted, which serializes concurrent acceptance attempts for the same shift and prevents headcount oversubscription. A worker-specific advisory transaction lock serializes concurrent acceptance attempts by the same worker even when the requests target different shifts. The RPC then rejects active assignment overlaps, past/non-open shifts, non-approved roles, or workers who fail the live deployability predicate. It writes an audit event only after the assignment is safely committed. Adjacent shifts are allowed when one ends exactly when the next begins.
 
 The current 10% margin threshold is an operational warning, not a database hard-stop. This avoids silently changing commercial policy while still surfacing low-margin demand for Ops review.
 
@@ -60,4 +66,4 @@ The V1 backend deliberately does not hard-delete payroll, attendance or audit re
 
 ## Staging validation
 
-After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions, demand tables and privacy requests; absence of raw token/national-ID columns; separation of identity/residency/eligibility fields; required SECURITY DEFINER boundaries; no direct authenticated mutation privileges for shifts/attendance/timesheets/privacy requests; no broad margin-view access; single-active identity-session enforcement; required retention policies; concurrency/separation-of-duties controls on timesheet review; locked, retention-aware privacy request review; and concurrency-safe shift acceptance with worker serialization, target-shift row locking and overlap rejection.
+After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions, demand tables and privacy requests; absence of raw token/national-ID columns; separation of identity/residency/eligibility fields; required SECURITY DEFINER boundaries; no direct authenticated mutation privileges for shifts/attendance/timesheets/privacy requests; no broad margin-view access; single-active identity-session enforcement; required retention policies; concurrency/separation-of-duties controls on timesheet review; locked, retention-aware privacy request review; concurrency-safe shift acceptance; and a shared live deployability predicate across readiness, shift discovery and shift acceptance, including consent and training-expiry enforcement.

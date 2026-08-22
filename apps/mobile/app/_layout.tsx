@@ -1,7 +1,27 @@
+import { useEffect } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { supabase } from '../lib/supabase';
 
 export default function RootLayout() {
+  useEffect(() => {
+    if (!supabase) return;
+
+    const syncAuthRefresh = (state: AppStateStatus) => {
+      if (state === 'active') supabase.auth.startAutoRefresh();
+      else supabase.auth.stopAutoRefresh();
+    };
+
+    syncAuthRefresh(AppState.currentState);
+    const subscription = AppState.addEventListener('change', syncAuthRefresh);
+
+    return () => {
+      subscription.remove();
+      supabase.auth.stopAutoRefresh();
+    };
+  }, []);
+
   return (
     <>
       <StatusBar style="auto" />

@@ -82,4 +82,26 @@ if (secretLeaks.length) {
   process.exit(1);
 }
 
-console.log('Security header, Ops indexing and client-secret checks passed.');
+// Ops writes must remain behind audited, authorization-aware RPCs. Direct table
+// mutations from browser-facing Ops code can bypass workflow invariants even when
+// RLS is present, so fail the build if insert/update/upsert/delete is chained from
+// supabase.from(...). Read-only select queries remain allowed.
+const opsRoot = path.join(root, 'app', 'ops');
+const directMutationPattern = /\.from\s*\([^)]*\)[\s\S]{0,500}?\.(insert|update|upsert|delete)\s*\(/g;
+const directOpsMutations = fs.existsSync(opsRoot)
+  ? walk(opsRoot).flatMap((file) => {
+      const source = fs.readFileSync(file, 'utf8');
+      return [...source.matchAll(directMutationPattern)].map((match) =>
+        `${path.relative(root, file)}:${match[1]}`,
+      );
+    })
+  : [];
+
+if (directOpsMutations.length) {
+  console.error(
+    `Ops least-privilege regression: direct table mutation found in ${directOpsMutations.join(', ')}. Use an audited server-side RPC instead.`,
+  );
+  process.exit(1);
+}
+
+console.log('Security header, Ops indexing, client-secret and least-privilege mutation checks passed.');

@@ -1,0 +1,87 @@
+name: QY Workforce VPS Agent Farm
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/vps-agent-farm.yml'
+      - 'scripts/vps-agent-farm/**'
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: qy-workforce-vps-agent-farm
+  cancel-in-progress: false
+
+jobs:
+  build-farm:
+    runs-on: self-hosted
+    timeout-minutes: 55
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify VPS agent prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v git
+          command -v codex
+          codex --version || true
+          free -h
+          uptime
+
+      - name: Run parallel code agents
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x scripts/vps-agent-farm/run-agent.sh
+          mkdir -p "$RUNNER_TEMP/qy-workforce-agent-logs"
+
+          # Code-writing agents are network/model heavy but usually light on local CPU.
+          # Run up to three at once to protect the 2 vCPU / 4 GB VPS from test/build spikes.
+          roles=(mobile web ops backend)
+          branches=(vps/mobile vps/web vps/ops vps/backend)
+          pids=()
+
+          for i in "${!roles[@]}"; do
+            role="${roles[$i]}"
+            branch="${branches[$i]}"
+            scripts/vps-agent-farm/run-agent.sh "$role" "$branch" >"$RUNNER_TEMP/qy-workforce-agent-logs/$role.log" 2>&1 &
+            pids+=("$!")
+            if (( ${#pids[@]} >= 3 )); then
+              wait "${pids[0]}" || true
+              pids=("${pids[@]:1}")
+            fi
+          done
+          for pid in "${pids[@]}"; do wait "$pid" || true; done
+
+      - name: Run QA and release agents
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts/vps-agent-farm/run-agent.sh qa vps/qa >"$RUNNER_TEMP/qy-workforce-agent-logs/qa.log" 2>&1 &
+          qa_pid=$!
+          scripts/vps-agent-farm/run-agent.sh release vps/release >"$RUNNER_TEMP/qy-workforce-agent-logs/release.log" 2>&1 &
+          release_pid=$!
+          wait "$qa_pid" || true
+          wait "$release_pid" || true
+
+      - name: Publish concise run summary
+        if: always()
+        shell: bash
+        run: |
+          echo '## VPS agent farm summary' >> "$GITHUB_STEP_SUMMARY"
+          for f in "$RUNNER_TEMP"/qy-workforce-agent-logs/*.log; do
+            [ -f "$f" ] || continue
+            name="$(basename "$f" .log)"
+            echo "### $name" >> "$GITHUB_STEP_SUMMARY"
+            tail -n 25 "$f" | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
+          done

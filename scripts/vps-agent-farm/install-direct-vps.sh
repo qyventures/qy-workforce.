@@ -14,51 +14,22 @@ cd "$REPO_DIR"
 git fetch origin main
 git checkout main
 git pull --ff-only origin main
-chmod +x scripts/vps-agent-farm/run-agent.sh
+chmod +x scripts/vps-agent-farm/run-agent.sh scripts/vps-agent-farm/run-farm.sh
 
 cat >/usr/local/bin/qy-workforce-agent-farm <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 REPO_DIR="${REPO_DIR:-/root/qy-workforce}"
-LOG_DIR="/var/log/qy-workforce-agent-farm"
-LOCK_FILE="/var/lock/qy-workforce-agent-farm.lock"
-mkdir -p "$LOG_DIR"
-exec 9>"$LOCK_FILE"
-if ! flock -n 9; then
-  echo "agent farm already running; skipping"
-  exit 0
-fi
 cd "$REPO_DIR"
-git fetch origin main
-git checkout main
-git pull --ff-only origin main
+git fetch origin main --quiet || true
+git checkout main >/dev/null 2>&1 || true
+git pull --ff-only origin main >/dev/null 2>&1 || true
 export GITHUB_WORKSPACE="$REPO_DIR"
 export RUNNER_TEMP="/tmp/qy-workforce-direct"
-mkdir -p "$RUNNER_TEMP"
-
-roles=(mobile web ops backend)
-branches=(vps/mobile vps/web vps/ops vps/backend)
-pids=()
-for i in "${!roles[@]}"; do
-  role="${roles[$i]}"
-  branch="${branches[$i]}"
-  scripts/vps-agent-farm/run-agent.sh "$role" "$branch" >"$LOG_DIR/$role.log" 2>&1 &
-  pids+=("$!")
-  if (( ${#pids[@]} >= 3 )); then
-    wait "${pids[0]}" || true
-    pids=("${pids[@]:1}")
-  fi
-done
-for pid in "${pids[@]}"; do wait "$pid" || true; done
-
-scripts/vps-agent-farm/run-agent.sh qa vps/qa >"$LOG_DIR/qa.log" 2>&1 &
-qa_pid=$!
-scripts/vps-agent-farm/run-agent.sh release vps/release >"$LOG_DIR/release.log" 2>&1 &
-release_pid=$!
-wait "$qa_pid" || true
-wait "$release_pid" || true
-
-date --iso-8601=seconds > "$LOG_DIR/last-success.txt"
+export QY_WORKFORCE_AGENT_LOG_DIR="/var/log/qy-workforce-agent-farm"
+export QY_WORKFORCE_AGENT_STATE_DIR="/var/lib/qy-workforce-agent-farm"
+mkdir -p "$RUNNER_TEMP" "$QY_WORKFORCE_AGENT_LOG_DIR" "$QY_WORKFORCE_AGENT_STATE_DIR"
+exec "$REPO_DIR/scripts/vps-agent-farm/run-farm.sh"
 EOF
 chmod +x /usr/local/bin/qy-workforce-agent-farm
 
@@ -81,7 +52,7 @@ EOF
 
 cat >/etc/systemd/system/qy-workforce-agent-farm.timer <<EOF
 [Unit]
-Description=Run QY Workforce VPS agent farm every ${RUN_INTERVAL_MINUTES} minutes
+Description=Run QY Workforce cost-aware VPS agent farm every ${RUN_INTERVAL_MINUTES} minutes
 
 [Timer]
 OnBootSec=5min
@@ -95,10 +66,9 @@ EOF
 
 systemctl daemon-reload
 systemctl enable --now qy-workforce-agent-farm.timer
-systemctl start qy-workforce-agent-farm.service
+systemctl restart qy-workforce-agent-farm.timer
 
-sleep 2
+echo "Installed hourly cost-aware VPS agent farm."
+echo "Policy: backend hourly; mobile every 2h; web/ops alternate hourly; QA every 3h on change; release every 4h on change."
+echo "Logs: /var/log/qy-workforce-agent-farm"
 systemctl --no-pager --full status qy-workforce-agent-farm.timer || true
-systemctl --no-pager --full status qy-workforce-agent-farm.service || true
-
-echo "Installed direct VPS agent farm. Logs: /var/log/qy-workforce-agent-farm"

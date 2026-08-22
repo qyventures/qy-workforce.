@@ -25,8 +25,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: apps/web/package-lock.json
+          # Lockfiles are not present in this scaffold yet. Do not point the
+          # hosted-runner cache at a missing file: setup-node fails before the
+          # install step in that case.
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run build
@@ -43,8 +44,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: apps/mobile/package-lock.json
+          # See the web job: avoid a hard failure while lockfiles are absent.
       - run: npm install --no-audit --no-fund
       - run: npm test
       - run: npm run typecheck

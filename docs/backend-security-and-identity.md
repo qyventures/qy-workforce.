@@ -26,6 +26,8 @@ Demand creation is server-authoritative. `clients`, `sites`, `roles` and `shifts
 
 Publishing is deliberately separate. `open_shift(shift_id)` can transition only a future `draft` shift to `open`, revalidates client/site/role activity under a row lock, and writes an audit event. Workers never publish demand directly; they discover eligible open shifts through the scoped worker feed and accept through the capacity-safe acceptance RPC.
 
+`accept_shift(shift_id)` now applies two transaction-level concurrency controls. The target shift row is locked before capacity is counted, which serializes concurrent acceptance attempts for the same shift and prevents headcount oversubscription. A worker-specific advisory transaction lock serializes concurrent acceptance attempts by the same worker even when the requests target different shifts. The RPC then rejects any active assignment whose time range overlaps the target shift, rejects shifts that have already started, re-checks deployability and role approval, and writes an audit event only after the assignment is safely committed. Adjacent shifts are allowed when one ends exactly when the next begins.
+
 The current 10% margin threshold is an operational warning, not a database hard-stop. This avoids silently changing commercial policy while still surfacing low-margin demand for Ops review.
 
 ## Attendance and timesheets
@@ -58,4 +60,4 @@ The V1 backend deliberately does not hard-delete payroll, attendance or audit re
 
 ## Staging validation
 
-After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions, demand tables and privacy requests; absence of raw token/national-ID columns; separation of identity/residency/eligibility fields; required SECURITY DEFINER boundaries; no direct authenticated mutation privileges for shifts/attendance/timesheets/privacy requests; no broad margin-view access; single-active identity-session enforcement; required retention policies; concurrency/separation-of-duties controls on timesheet review; and locked, retention-aware privacy request review.
+After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions, demand tables and privacy requests; absence of raw token/national-ID columns; separation of identity/residency/eligibility fields; required SECURITY DEFINER boundaries; no direct authenticated mutation privileges for shifts/attendance/timesheets/privacy requests; no broad margin-view access; single-active identity-session enforcement; required retention policies; concurrency/separation-of-duties controls on timesheet review; locked, retention-aware privacy request review; and concurrency-safe shift acceptance with worker serialization, target-shift row locking and overlap rejection.

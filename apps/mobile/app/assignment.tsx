@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../lib/supabase';
 
@@ -13,7 +13,6 @@ type AssignmentDetail = {
     ends_at: string;
     status: string;
     worker_rate: number | null;
-    requirements: string | null;
     sites: { name: string; address: string | null } | null;
     roles: { name: string } | null;
   } | null;
@@ -36,7 +35,6 @@ const demo: AssignmentDetail = {
     ends_at: new Date(Date.now() + 86400000 + 8 * 3600000).toISOString(),
     status: 'assigned',
     worker_rate: 16,
-    requirements: 'Black pants and covered shoes.',
     sites: { name: 'Demo Hotel', address: 'Singapore' },
     roles: { name: 'F&B Service Crew' },
   },
@@ -79,7 +77,7 @@ export default function AssignmentScreen() {
 
     const { data, error: queryError } = await supabase
       .from('shift_assignments')
-      .select('id,accepted_at,cancelled_at,shifts(id,starts_at,ends_at,status,worker_rate,requirements,sites(name,address),roles(name)),timesheets(id,status,payable_minutes,worker_amount,rejection_reason)')
+      .select('id,accepted_at,cancelled_at,shifts(id,starts_at,ends_at,status,worker_rate,sites(name,address),roles(name)),timesheets(id,status,payable_minutes,worker_amount,rejection_reason)')
       .eq('id', assignmentId)
       .eq('worker_id', authData.user.id)
       .maybeSingle();
@@ -117,7 +115,7 @@ export default function AssignmentScreen() {
     <Text style={styles.title}>{shift.roles?.name ?? 'Shift assignment'}</Text>
     <Text style={styles.site}>{shift.sites?.name ?? 'Work site'}</Text>
 
-    {error && <View style={styles.warning}><Text style={styles.warningText}>{error}</Text></View>}
+    {error && <View style={styles.warning} accessibilityRole="alert"><Text style={styles.warningText}>{error}</Text></View>}
 
     <View style={styles.card} accessible accessibilityLabel="Shift details">
       <Text style={styles.sectionTitle}>Shift details</Text>
@@ -128,7 +126,6 @@ export default function AssignmentScreen() {
       <Text style={styles.label}>Rate</Text>
       <Text style={styles.value}>{shift.worker_rate == null ? 'Rate pending' : `S$${Number(shift.worker_rate).toFixed(2)} / hr`}</Text>
       {estimatedScheduledPay != null && <Text style={styles.helper}>Scheduled-shift estimate: S${estimatedScheduledPay.toFixed(2)}. Final pay follows approved payable time.</Text>}
-      {shift.requirements && <><Text style={styles.label}>What to bring / wear</Text><Text style={styles.value}>{shift.requirements}</Text></>}
     </View>
 
     <View style={styles.card} accessible accessibilityLabel="Attendance and timesheet status">

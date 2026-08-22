@@ -2,14 +2,15 @@ import type { Metadata } from 'next';
 import React from 'react';
 
 export const metadata: Metadata = {
-  title: 'QY Workforce | Flexible staffing for Singapore',
+  title: { default: 'QY Workforce | Flexible staffing for Singapore', template: '%s | QY Workforce' },
   description: 'Verified casual workers for hospitality, F&B, cleaning, retail, promotions and events.',
   metadataBase: new URL('https://workforce.qyvent.com'),
   openGraph: {
-    title: 'QY Workforce',
+    title: 'QY Workforce | Flexible staffing for Singapore',
     description: 'Flexible staffing, verified workers and operational visibility.',
     type: 'website',
   },
+  alternates: { canonical: '/' },
   robots: { index: true, follow: true },
 };
 

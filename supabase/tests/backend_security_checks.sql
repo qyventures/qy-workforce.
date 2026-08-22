@@ -32,7 +32,8 @@ begin
       'start_identity_session','complete_identity_verification_staging','get_site_margin_report',
       'create_shift_draft','open_shift','mark_identity_callback_received_staging',
       'fail_identity_session_staging','expire_identity_sessions','review_timesheet',
-      'request_privacy_action','review_privacy_request','accept_shift'
+      'request_privacy_action','review_privacy_request','accept_shift',
+      'worker_has_deployment_prerequisites','worker_is_deployable','get_available_shifts'
     ) and not p.prosecdef
   ) then raise exception 'security boundary RPC must remain security definer'; end if;
 
@@ -135,7 +136,31 @@ begin
       and pg_get_functiondef(p.oid) ilike '%for update%'
       and pg_get_functiondef(p.oid) ilike '%worker has overlapping shift%'
       and pg_get_functiondef(p.oid) ilike '%shift full%'
-  ) then raise exception 'shift acceptance must serialize worker and shift capacity and reject overlap'; end if;
+      and pg_get_functiondef(p.oid) ilike '%worker_is_deployable%'
+  ) then raise exception 'shift acceptance must serialize capacity/worker and enforce live deployability'; end if;
+
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='worker_has_deployment_prerequisites'
+      and pg_get_functiondef(p.oid) ilike '%identity_verified%'
+      and pg_get_functiondef(p.oid) ilike '%residency_verified%'
+      and pg_get_functiondef(p.oid) ilike '%work_eligibility = ''eligible''%'
+      and pg_get_functiondef(p.oid) ilike '%location_clocking%'
+      and pg_get_functiondef(p.oid) ilike '%expires_at > now()%'
+  ) then raise exception 'deployability prerequisites must keep identity/residency/eligibility separate and enforce consent/training freshness'; end if;
+
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='worker_is_deployable'
+      and pg_get_functiondef(p.oid) ilike '%status = ''deployable''%'
+      and pg_get_functiondef(p.oid) ilike '%worker_has_deployment_prerequisites%'
+  ) then raise exception 'deployability must require both the Ops gate and live prerequisites'; end if;
+
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='get_available_shifts'
+      and pg_get_functiondef(p.oid) ilike '%worker_is_deployable%'
+  ) then raise exception 'shift discovery must enforce live deployability'; end if;
 end $$;
 
 rollback;

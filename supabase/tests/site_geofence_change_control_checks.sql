@@ -30,11 +30,11 @@ begin
   end if;
 end $$;
 
--- Authenticated callers may invoke the RPC, but PUBLIC/anonymous access must not be granted.
+-- Authenticated callers may invoke the RPC, but anonymous access must not be granted.
 do $$
 begin
-  if has_function_privilege('public', 'public.update_site_geofence(uuid,numeric,numeric,integer,text)', 'EXECUTE') then
-    raise exception 'PUBLIC must not execute update_site_geofence';
+  if has_function_privilege('anon', 'public.update_site_geofence(uuid,numeric,numeric,integer,text)', 'EXECUTE') then
+    raise exception 'anon must not execute update_site_geofence';
   end if;
   if not has_function_privilege('authenticated', 'public.update_site_geofence(uuid,numeric,numeric,integer,text)', 'EXECUTE') then
     raise exception 'authenticated role should be able to invoke update_site_geofence for in-function role checks';

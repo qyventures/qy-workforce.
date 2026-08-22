@@ -1,13 +1,44 @@
-import { useEffect } from 'react';
-import { AppState, type AppStateStatus } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, AppState, StyleSheet, Text, View, type AppStateStatus } from 'react-native';
 import * as Linking from 'expo-linking';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { resolveAuthRedirect } from '../lib/auth-routing.mjs';
 import { supabase } from '../lib/supabase';
 import { resolveAppRoute } from '../lib/navigation.mjs';
 
 export default function RootLayout() {
   const router = useRouter();
+  const segments = useSegments();
+  const [sessionResolved, setSessionResolved] = useState(!supabase);
+  const [authenticated, setAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const client = supabase;
+    if (!client) return;
+
+    let active = true;
+    void client.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setAuthenticated(Boolean(data.session));
+      setSessionResolved(true);
+    }).catch(() => {
+      if (!active) return;
+      setAuthenticated(false);
+      setSessionResolved(true);
+    });
+
+    const { data: authSubscription } = client.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      setAuthenticated(Boolean(session));
+      setSessionResolved(true);
+    });
+
+    return () => {
+      active = false;
+      authSubscription.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     const client = supabase;
@@ -28,6 +59,16 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    const redirect = resolveAuthRedirect({
+      configured: Boolean(supabase),
+      sessionResolved,
+      authenticated,
+      segment: segments[0],
+    });
+    if (redirect) router.replace(redirect as never);
+  }, [authenticated, router, segments, sessionResolved]);
+
+  useEffect(() => {
     let active = true;
 
     const openTrustedRoute = (url: string | null) => {
@@ -44,6 +85,16 @@ export default function RootLayout() {
       subscription.remove();
     };
   }, [router]);
+
+  if (supabase && !sessionResolved) {
+    return (
+      <View style={styles.loading} accessibilityRole="progressbar" accessibilityLabel="Checking secure sign in">
+        <StatusBar style="light" />
+        <ActivityIndicator size="large" color="#FFFFFF" />
+        <Text style={styles.loadingText}>Checking secure sign in…</Text>
+      </View>
+    );
+  }
 
   return (
     <>
@@ -65,7 +116,23 @@ export default function RootLayout() {
         <Stack.Screen name="assignment" options={{ title: 'Shift details' }} />
         <Stack.Screen name="attendance" options={{ title: 'Attendance' }} />
         <Stack.Screen name="earnings" options={{ title: 'Earnings' }} />
+        <Stack.Screen name="notifications" options={{ title: 'Updates' }} />
       </Stack>
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+    backgroundColor: '#0A0A0A',
+    padding: 24,
+  },
+  loadingText: {
+    color: '#D4D4D4',
+    fontSize: 15,
+  },
+});

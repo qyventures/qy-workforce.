@@ -6,6 +6,7 @@ const cards = [
   { title: 'My shifts', body: 'See accepted work, attendance status and submitted timesheets.', href: '/my-shifts' as const },
   { title: 'Earnings', body: 'Track estimated earnings and timesheet payment status in one place.', href: '/earnings' as const },
   { title: 'Clock in / out', body: 'Verify attendance at the assigned site using geofenced location.', href: '/attendance' as const },
+  { title: 'Updates', body: 'Open trusted shift, attendance and readiness reminders in one place.', href: '/notifications' as const },
   { title: 'Readiness', body: 'See identity, eligibility, role, vetting, training and consent checks in one place.', href: '/readiness' as const },
   { title: 'Profile & training', body: 'Complete onboarding, verification, certificates and required training.', href: '/onboarding' as const },
 ];

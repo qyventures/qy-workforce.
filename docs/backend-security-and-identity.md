@@ -34,6 +34,8 @@ Clock events are tied to an accepted assignment and validated server-side agains
 
 Authenticated clients no longer have direct INSERT/UPDATE/DELETE privileges on `time_events` or `timesheets`; attendance and timesheet state changes must use the audited server RPCs. This prevents a modified client from fabricating geofence outcomes, payable minutes or approval/payroll state through direct table writes.
 
+`review_timesheet(...)` locks the submitted timesheet before authorization and transition. This prevents two concurrent reviewers from both producing valid decisions or duplicate audit trails. Review also enforces separation of duties: a user who is the worker on the timesheet cannot approve or reject that same timesheet, even if they also hold a supervisor/Ops/Admin role.
+
 ## Payroll
 
 Only Finance/Admin can create, lock or export payroll batches. A batch contains approved timesheets only. Locking a batch moves its included timesheets to `payroll_ready`. Export requires a locked batch and records format/count/checksum in the audit trail. Payment-rail credentials and bank credentials remain outside this database.
@@ -50,4 +52,4 @@ Retention periods are registry-driven and intentionally reviewable before produc
 
 ## Staging validation
 
-After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions and demand tables, absence of raw token/national-ID columns, separation of identity/residency/eligibility fields, required SECURITY DEFINER boundaries, no direct authenticated mutation privileges for shifts/attendance/timesheets, no broad margin-view access, single-active identity-session enforcement, and the identity retention policy.
+After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions and demand tables, absence of raw token/national-ID columns, separation of identity/residency/eligibility fields, required SECURITY DEFINER boundaries, no direct authenticated mutation privileges for shifts/attendance/timesheets, no broad margin-view access, single-active identity-session enforcement, identity retention policy, and concurrency/separation-of-duties controls on timesheet review.

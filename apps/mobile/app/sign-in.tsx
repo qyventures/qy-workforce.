@@ -1,7 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { isLikelyNetworkError } from '../lib/errors';
 import { supabase } from '../lib/supabase';
+
+const RESEND_COOLDOWN_SECONDS = 45;
+
+function normalizePhone(value: string) {
+  return value.replace(/[\s()-]/g, '');
+}
+
+function isValidPhone(value: string) {
+  return /^\+[1-9]\d{7,14}$/.test(value);
+}
+
+function isValidOtp(value: string) {
+  return /^\d{4,8}$/.test(value);
+}
 
 export default function SignInScreen() {
   const [phone, setPhone] = useState('+65');
@@ -9,33 +24,87 @@ export default function SignInScreen() {
   const [stage, setStage] = useState<'phone' | 'otp'>('phone');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [resendSeconds, setResendSeconds] = useState(0);
+
+  useEffect(() => {
+    if (resendSeconds <= 0) return;
+    const timer = setTimeout(() => setResendSeconds((value) => Math.max(0, value - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [resendSeconds]);
+
+  const normalizedPhone = useMemo(() => normalizePhone(phone), [phone]);
+  const canRequestOtp = !busy && resendSeconds === 0;
 
   async function requestOtp() {
-    if (!supabase) { setMessage('Staging sign-in is not configured on this build.'); return; }
-    const normalized = phone.replace(/[\s()-]/g, '');
-    if (!/^\+[1-9]\d{7,14}$/.test(normalized)) { setMessage('Enter a valid mobile number including country code.'); return; }
-    setBusy(true); setMessage('');
-    const { error } = await supabase.auth.signInWithOtp({ phone: normalized });
-    setBusy(false);
-    if (error) setMessage(error.message);
-    else { setPhone(normalized); setStage('otp'); setMessage('Enter the verification code sent to your mobile.'); }
+    if (!supabase) {
+      setMessage('Staging sign-in is not configured on this build.');
+      return;
+    }
+
+    if (!isValidPhone(normalizedPhone)) {
+      setMessage('Enter a valid mobile number including country code.');
+      return;
+    }
+
+    if (!canRequestOtp) return;
+
+    setBusy(true);
+    setMessage('');
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ phone: normalizedPhone });
+      if (error) throw error;
+      setPhone(normalizedPhone);
+      setStage('otp');
+      setResendSeconds(RESEND_COOLDOWN_SECONDS);
+      setMessage('If this number can receive verification messages, enter the code sent to your mobile.');
+    } catch (error) {
+      setMessage(
+        isLikelyNetworkError(error)
+          ? 'We could not reach the sign-in service. Check your connection and try again.'
+          : 'We could not send a verification code. Please try again shortly.'
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function verifyOtp() {
     if (!supabase) return;
-    if (!/^\d{4,8}$/.test(token)) { setMessage('Enter the verification code.'); return; }
-    setBusy(true); setMessage('');
-    const { error } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' });
-    setBusy(false);
-    if (error) setMessage(error.message);
-    else router.replace('/');
+    if (!isValidOtp(token)) {
+      setMessage('Enter the verification code.');
+      return;
+    }
+
+    setBusy(true);
+    setMessage('');
+    try {
+      const { error } = await supabase.auth.verifyOtp({ phone: normalizedPhone, token, type: 'sms' });
+      if (error) throw error;
+      setToken('');
+      router.replace('/');
+    } catch (error) {
+      setMessage(
+        isLikelyNetworkError(error)
+          ? 'We could not verify the code because the connection was interrupted. Check your connection and try again.'
+          : 'The verification code could not be accepted. Check the code or request a new one.'
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function changeNumber() {
+    setStage('phone');
+    setToken('');
+    setMessage('');
+    setResendSeconds(0);
   }
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <Text style={styles.eyebrow}>QY WORKFORCE</Text>
-        <Text style={styles.title}>Sign in securely</Text>
+        <Text style={styles.title} accessibilityRole="header">Sign in securely</Text>
         <Text style={styles.body}>Use your mobile number to access your worker profile, shifts and attendance. Never share your verification code.</Text>
 
         {stage === 'phone' ? (
@@ -50,17 +119,29 @@ export default function SignInScreen() {
               style={styles.input}
               placeholder="+65 8123 4567"
               placeholderTextColor="#737373"
+              accessibilityLabel="Mobile number including country code"
+              editable={!busy}
+              returnKeyType="done"
+              onSubmitEditing={requestOtp}
             />
-            <TouchableOpacity disabled={busy} onPress={requestOtp} style={[styles.button, busy && styles.disabled]}>
+            <TouchableOpacity
+              disabled={!canRequestOtp}
+              onPress={requestOtp}
+              style={[styles.button, !canRequestOtp && styles.disabled]}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canRequestOtp, busy }}
+              accessibilityLabel="Send verification code"
+            >
               <Text style={styles.buttonText}>{busy ? 'Sending…' : 'Send verification code'}</Text>
             </TouchableOpacity>
           </>
         ) : (
           <>
+            <Text style={styles.number}>Code sent to {phone}</Text>
             <Text style={styles.label}>Verification code</Text>
             <TextInput
               value={token}
-              onChangeText={setToken}
+              onChangeText={(value) => setToken(value.replace(/\D/g, '').slice(0, 8))}
               keyboardType="number-pad"
               autoComplete="sms-otp"
               textContentType="oneTimeCode"
@@ -69,17 +150,48 @@ export default function SignInScreen() {
               style={styles.input}
               placeholder="Enter code"
               placeholderTextColor="#737373"
+              accessibilityLabel="Verification code"
+              editable={!busy}
+              returnKeyType="done"
+              onSubmitEditing={verifyOtp}
             />
-            <TouchableOpacity disabled={busy} onPress={verifyOtp} style={[styles.button, busy && styles.disabled]}>
+            <TouchableOpacity
+              disabled={busy}
+              onPress={verifyOtp}
+              style={[styles.button, busy && styles.disabled]}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: busy, busy }}
+              accessibilityLabel="Verify code and sign in"
+            >
               <Text style={styles.buttonText}>{busy ? 'Verifying…' : 'Verify and sign in'}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => { setStage('phone'); setToken(''); setMessage(''); }} style={styles.secondary}>
+
+            <TouchableOpacity
+              disabled={!canRequestOtp}
+              onPress={requestOtp}
+              style={[styles.secondary, !canRequestOtp && styles.disabled]}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canRequestOtp }}
+              accessibilityLabel={resendSeconds > 0 ? `Resend verification code in ${resendSeconds} seconds` : 'Resend verification code'}
+            >
+              <Text style={styles.secondaryText}>
+                {resendSeconds > 0 ? `Resend code in ${resendSeconds}s` : 'Resend verification code'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              disabled={busy}
+              onPress={changeNumber}
+              style={styles.secondary}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: busy }}
+            >
               <Text style={styles.secondaryText}>Use a different number</Text>
             </TouchableOpacity>
           </>
         )}
 
-        {message ? <Text style={styles.message}>{message}</Text> : null}
+        {message ? <Text style={styles.message} accessibilityLiveRegion="polite">{message}</Text> : null}
         <Text style={styles.privacy}>QY Workforce stores an authenticated session securely on this device. SMS delivery remains disabled until a staging Supabase authentication provider is configured.</Text>
       </View>
     </SafeAreaView>
@@ -92,12 +204,13 @@ const styles = StyleSheet.create({
   eyebrow: { color: '#A3A3A3', fontSize: 12, letterSpacing: 2, marginBottom: 12 },
   title: { color: '#FFFFFF', fontSize: 34, fontWeight: '700', marginBottom: 12 },
   body: { color: '#B3B3B3', fontSize: 16, lineHeight: 24, marginBottom: 28 },
+  number: { color: '#A3A3A3', fontSize: 13, marginBottom: 16 },
   label: { color: '#D4D4D4', fontSize: 14, marginBottom: 8 },
-  input: { backgroundColor: '#171717', borderWidth: 1, borderColor: '#333333', borderRadius: 12, padding: 15, color: '#FFFFFF', fontSize: 18, marginBottom: 14 },
-  button: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, alignItems: 'center' },
+  input: { backgroundColor: '#171717', borderWidth: 1, borderColor: '#333333', borderRadius: 12, padding: 15, color: '#FFFFFF', fontSize: 18, marginBottom: 14, minHeight: 52 },
+  button: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
   buttonText: { color: '#111111', fontWeight: '700', fontSize: 16 },
   disabled: { opacity: 0.55 },
-  secondary: { padding: 16, alignItems: 'center' },
+  secondary: { padding: 14, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   secondaryText: { color: '#D4D4D4' },
   message: { color: '#E5E7EB', marginTop: 18, lineHeight: 20 },
   privacy: { color: '#737373', fontSize: 12, lineHeight: 18, marginTop: 28 },

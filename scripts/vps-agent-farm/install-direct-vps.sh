@@ -3,7 +3,7 @@ set -euo pipefail
 
 REPO_DIR="${REPO_DIR:-/root/qy-workforce}"
 SERVICE_USER="${SERVICE_USER:-root}"
-RUN_INTERVAL_MINUTES="${RUN_INTERVAL_MINUTES:-30}"
+RUN_INTERVAL_MINUTES="${RUN_INTERVAL_MINUTES:-120}"
 
 if [ ! -d "$REPO_DIR/.git" ]; then
   echo "Expected existing repo at $REPO_DIR" >&2

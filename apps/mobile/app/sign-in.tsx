@@ -2,21 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { isLikelyNetworkError } from '../lib/errors';
+import { MAX_OTP_LENGTH, isValidOtp, isValidPhone, normalizeOtp, normalizePhone } from '../lib/otp.mjs';
 import { supabase } from '../lib/supabase';
 
 const RESEND_COOLDOWN_SECONDS = 45;
-
-function normalizePhone(value: string) {
-  return value.replace(/[\s()-]/g, '');
-}
-
-function isValidPhone(value: string) {
-  return /^\+[1-9]\d{7,14}$/.test(value);
-}
-
-function isValidOtp(value: string) {
-  return /^\d{4,8}$/.test(value);
-}
 
 export default function SignInScreen() {
   const [phone, setPhone] = useState('+65');
@@ -141,12 +130,12 @@ export default function SignInScreen() {
             <Text style={styles.label}>Verification code</Text>
             <TextInput
               value={token}
-              onChangeText={(value) => setToken(value.replace(/\D/g, '').slice(0, 8))}
+              onChangeText={(value) => setToken(normalizeOtp(value))}
               keyboardType="number-pad"
               autoComplete="sms-otp"
               textContentType="oneTimeCode"
               secureTextEntry
-              maxLength={8}
+              maxLength={MAX_OTP_LENGTH}
               style={styles.input}
               placeholder="Enter code"
               placeholderTextColor="#737373"

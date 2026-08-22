@@ -31,13 +31,18 @@ begin
     where n.nspname='public' and p.proname in (
       'start_identity_session','complete_identity_verification_staging','get_site_margin_report',
       'create_shift_draft','open_shift','mark_identity_callback_received_staging',
-      'fail_identity_session_staging','expire_identity_sessions','review_timesheet'
+      'fail_identity_session_staging','expire_identity_sessions','review_timesheet',
+      'request_privacy_action','review_privacy_request'
     ) and not p.prosecdef
   ) then raise exception 'security boundary RPC must remain security definer'; end if;
 
   if not exists (
     select 1 from public.data_retention_policies where data_class='identity_verifications'
   ) then raise exception 'identity verification retention policy required'; end if;
+
+  if not exists (
+    select 1 from public.data_retention_policies where data_class='privacy_requests'
+  ) then raise exception 'privacy request retention policy required'; end if;
 
   if exists (
     select 1
@@ -96,6 +101,31 @@ begin
       and pg_get_functiondef(p.oid) ilike '%for update of t%'
       and pg_get_functiondef(p.oid) ilike '%self review is not permitted%'
   ) then raise exception 'timesheet review must lock the row and enforce separation of duties'; end if;
+
+  if not exists (
+    select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='public' and c.relname='privacy_requests' and c.relrowsecurity
+  ) then raise exception 'privacy_requests must have RLS enabled'; end if;
+
+  if has_table_privilege('authenticated', 'public.privacy_requests', 'INSERT')
+     or has_table_privilege('authenticated', 'public.privacy_requests', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.privacy_requests', 'DELETE') then
+    raise exception 'privacy request writes must be RPC-only';
+  end if;
+
+  if not exists (
+    select 1 from pg_indexes
+    where schemaname='public' and tablename='privacy_requests'
+      and indexname='privacy_requests_one_open_per_type'
+  ) then raise exception 'duplicate active privacy requests must be constrained'; end if;
+
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='review_privacy_request'
+      and pg_get_functiondef(p.oid) ilike '%for update%'
+      and pg_get_functiondef(p.oid) ilike '%self-review is not permitted%'
+      and pg_get_functiondef(p.oid) ilike '%retention hold%'
+  ) then raise exception 'privacy review must lock rows, block self-review and respect retention holds'; end if;
 end $$;
 
 rollback;

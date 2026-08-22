@@ -27,7 +27,7 @@ begin
   if position('provider_subject_hash=null' in replace(v_def,' ',''))=0 then
     raise exception 'identity retention must remove provider subject correlation';
   end if;
-  if position("verified_attributes - 'identity_verified' - 'residency_verified' - 'work_eligibility'" in v_def)=0 then
+  if position('verified_attributes - ''identity_verified'' - ''residency_verified'' - ''work_eligibility''' in v_def)=0 then
     raise exception 'identity minimisation must be idempotent once only approved normalized fields remain';
   end if;
   if position('audit_events' in v_def)=0 or position('payroll_and_timesheets' in v_def)=0 then

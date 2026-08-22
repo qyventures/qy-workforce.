@@ -1,4 +1,11 @@
-const industries = ['Hospitality', 'F&B', 'Cleaning', 'Retail', 'Promoters', 'Events'];
+const industries = [
+  ['Hospitality','hospitality'],
+  ['F&B','food-beverage'],
+  ['Cleaning','cleaning'],
+  ['Retail','retail'],
+  ['Promoters','promotions'],
+  ['Events','events'],
+];
 
 export default function HomePage() {
   return (
@@ -15,9 +22,12 @@ export default function HomePage() {
       </section>
 
       <section style={{maxWidth:1180, margin:'0 auto', padding:'32px 24px 80px'}}>
-        <p style={{color:'#888'}}>Industries</p>
+        <div style={{display:'flex',justifyContent:'space-between',gap:16,alignItems:'end',flexWrap:'wrap',marginBottom:14}}>
+          <p style={{color:'#888',margin:0}}>Industries</p>
+          <a href="/industries" data-analytics-event="home_all_industries" style={{color:'#ccc',fontSize:14}}>Explore all industries →</a>
+        </div>
         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:12}}>
-          {industries.map(x => <div key={x} style={{border:'1px solid #222', borderRadius:14, padding:22, background:'#111'}}><strong>{x}</strong></div>)}
+          {industries.map(([name,id]) => <a key={id} href={`/industries#${id}`} data-analytics-event={`home_industry_${id}`} style={{border:'1px solid #222', borderRadius:14, padding:22, background:'#111',color:'#fff',textDecoration:'none'}}><strong>{name}</strong><div style={{color:'#777',fontSize:13,marginTop:8}}>Roles, employer use cases and worker journey →</div></a>)}
         </div>
       </section>
 
@@ -43,7 +53,7 @@ export default function HomePage() {
       </section>
 
       <footer style={{maxWidth:1180,margin:'0 auto',padding:'28px 24px 44px',borderTop:'1px solid #222',display:'flex',gap:18,flexWrap:'wrap',fontSize:14}}>
-        <a href="/trust" style={{color:'#aaa'}}>Trust & Compliance</a><a href="/privacy" style={{color:'#aaa'}}>Privacy</a><a href="/terms" style={{color:'#aaa'}}>Terms</a>
+        <a href="/industries" style={{color:'#aaa'}}>Industries</a><a href="/trust" style={{color:'#aaa'}}>Trust & Compliance</a><a href="/privacy" style={{color:'#aaa'}}>Privacy</a><a href="/terms" style={{color:'#aaa'}}>Terms</a>
       </footer>
     </main>
   );

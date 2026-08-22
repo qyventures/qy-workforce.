@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import { estimatedScheduledPay, normalizeAssignmentSchedule, safeHourlyRate } from '../lib/assignment.mjs';
 import { isLikelyNetworkError, mobileErrorMessage } from '../lib/errors';
 
 type AssignmentDetail = {
@@ -94,8 +95,8 @@ export default function AssignmentScreen() {
       setItem(data as unknown as AssignmentDetail);
     } catch (caught) {
       const message = isLikelyNetworkError(caught)
-        ? 'You may be offline or on an unstable connection. Reconnect and pull down to refresh this assignment.'
-        : mobileErrorMessage(caught, 'We could not load this assignment. Pull down to try again.');
+        ? 'You may be offline or on an unstable connection. Reconnect and try loading this assignment again.'
+        : mobileErrorMessage(caught, 'We could not load this assignment. Try again.');
       setError(message);
     } finally {
       setLoading(false);
@@ -107,13 +108,14 @@ export default function AssignmentScreen() {
 
   const summary = useMemo(() => {
     if (!item?.shifts) return null;
-    const start = new Date(item.shifts.starts_at);
-    const end = new Date(item.shifts.ends_at);
-    const durationMinutes = Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000));
-    const estimatedScheduledPay = item.shifts.worker_rate == null
-      ? null
-      : durationMinutes / 60 * Number(item.shifts.worker_rate);
-    return { start, end, durationMinutes, estimatedScheduledPay };
+    const schedule = normalizeAssignmentSchedule(item.shifts.starts_at, item.shifts.ends_at);
+    if (!schedule) return null;
+    const rate = safeHourlyRate(item.shifts.worker_rate);
+    return {
+      ...schedule,
+      hourlyRate: rate,
+      estimatedScheduledPay: estimatedScheduledPay(schedule.durationMinutes, rate),
+    };
   }, [item]);
 
   if (loading) {
@@ -121,11 +123,20 @@ export default function AssignmentScreen() {
   }
 
   if (!item || !item.shifts || !summary) {
+    const malformedSchedule = Boolean(item?.shifts) && !summary;
+    const unavailableMessage = malformedSchedule
+      ? 'This shift has an invalid schedule. Please return to My Shifts and contact operations if it remains visible.'
+      : error ?? 'Please return to My Shifts.';
+    const canRetry = Boolean(supabase && assignmentId && !malformedSchedule);
+
     return <View style={styles.center}>
       <Text style={styles.errorTitle} accessibilityRole="header">Assignment unavailable</Text>
-      <Text style={styles.muted} accessibilityLiveRegion="polite">{error ?? 'Please return to My Shifts.'}</Text>
-      <Pressable accessibilityRole="button" style={styles.primary} onPress={() => router.replace('/my-shifts')}>
-        <Text style={styles.primaryText}>Back to My Shifts</Text>
+      <Text style={styles.muted} accessibilityLiveRegion="polite">{unavailableMessage}</Text>
+      {canRetry && <Pressable accessibilityRole="button" accessibilityLabel="Retry loading assignment" style={styles.primary} onPress={() => void load()}>
+        <Text style={styles.primaryText}>Try again</Text>
+      </Pressable>}
+      <Pressable accessibilityRole="button" style={styles.secondary} onPress={() => router.replace('/my-shifts')}>
+        <Text style={styles.secondaryText}>Back to My Shifts</Text>
       </Pressable>
     </View>;
   }
@@ -155,7 +166,7 @@ export default function AssignmentScreen() {
       <Text style={styles.label}>Location</Text>
       <Text style={styles.value}>{shift.sites?.address ?? 'Address will be provided by operations.'}</Text>
       <Text style={styles.label}>Rate</Text>
-      <Text style={styles.value}>{shift.worker_rate == null ? 'Rate pending' : `S$${Number(shift.worker_rate).toFixed(2)} / hr`}</Text>
+      <Text style={styles.value}>{summary.hourlyRate == null ? 'Rate pending' : `S$${summary.hourlyRate.toFixed(2)} / hr`}</Text>
       {summary.estimatedScheduledPay != null && <Text style={styles.helper}>Scheduled-shift estimate: S${summary.estimatedScheduledPay.toFixed(2)}. Final pay follows approved payable time.</Text>}
     </View>
 
@@ -205,7 +216,7 @@ const styles = StyleSheet.create({
   actions: { gap: 10 },
   primary: { borderRadius: 14, padding: 15, minHeight: 52, backgroundColor: '#111', alignItems: 'center', justifyContent: 'center', minWidth: 180 },
   primaryText: { color: '#fff', fontWeight: '800' },
-  secondary: { borderRadius: 14, padding: 15, minHeight: 52, borderWidth: 1, borderColor: '#d8dbe0', alignItems: 'center', justifyContent: 'center' },
+  secondary: { borderRadius: 14, padding: 15, minHeight: 52, borderWidth: 1, borderColor: '#d8dbe0', alignItems: 'center', justifyContent: 'center', minWidth: 180 },
   secondaryText: { color: '#111', fontWeight: '800' },
   disabled: { opacity: 0.35 },
   muted: { color: '#68707b', textAlign: 'center' },

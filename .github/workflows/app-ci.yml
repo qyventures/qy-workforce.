@@ -1,13 +1,18 @@
 name: App CI
 
+# Validate proposed changes before merge. Do not rerun the identical suite after
+# merging to main; that duplicates hosted-runner minutes without adding signal.
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: app-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   web:

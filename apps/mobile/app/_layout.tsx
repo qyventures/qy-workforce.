@@ -1,10 +1,14 @@
 import { useEffect } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
-import { Stack } from 'expo-router';
+import * as Linking from 'expo-linking';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../lib/supabase';
+import { resolveAppRoute } from '../lib/navigation.mjs';
 
 export default function RootLayout() {
+  const router = useRouter();
+
   useEffect(() => {
     const client = supabase;
     if (!client) return;
@@ -22,6 +26,24 @@ export default function RootLayout() {
       client.auth.stopAutoRefresh();
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const openTrustedRoute = (url: string | null) => {
+      if (!active || !url) return;
+      const route = resolveAppRoute(url);
+      if (route) router.replace(route as never);
+    };
+
+    void Linking.getInitialURL().then(openTrustedRoute).catch(() => undefined);
+    const subscription = Linking.addEventListener('url', ({ url }) => openTrustedRoute(url));
+
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, [router]);
 
   return (
     <>

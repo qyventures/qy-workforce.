@@ -1,6 +1,21 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import styles from './layout.module.css';
+
+export const metadata: Metadata = {
+  title: 'Operations | QY Workforce',
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
+};
 
 const nav = [
   { href: '/ops', label: 'Command Centre' },

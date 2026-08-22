@@ -84,7 +84,10 @@ begin
     select least(count(*)::integer,v_limit) into v_identity_count
     from public.identity_verifications iv
     where iv.created_at < now() - make_interval(days=>v_identity_days)
-      and (iv.provider_subject_hash is not null or iv.verified_attributes <> '{}'::jsonb)
+      and (
+        iv.provider_subject_hash is not null
+        or (iv.verified_attributes - 'identity_verified' - 'residency_verified' - 'work_eligibility') <> '{}'::jsonb
+      )
       and not exists (
         select 1 from public.privacy_requests pr
         where pr.worker_id=iv.worker_id and pr.retention_hold=true
@@ -146,7 +149,10 @@ begin
        select iv2.id
        from public.identity_verifications iv2
        where iv2.created_at < now() - make_interval(days=>v_identity_days)
-         and (iv2.provider_subject_hash is not null or iv2.verified_attributes <> '{}'::jsonb)
+         and (
+           iv2.provider_subject_hash is not null
+           or (iv2.verified_attributes - 'identity_verified' - 'residency_verified' - 'work_eligibility') <> '{}'::jsonb
+         )
          and not exists (
            select 1 from public.privacy_requests pr
            where pr.worker_id=iv2.worker_id and pr.retention_hold=true

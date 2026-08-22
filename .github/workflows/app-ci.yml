@@ -1,13 +1,18 @@
 name: App CI
 
+# Validate proposed changes before merge. Do not rerun the identical suite after
+# merging to main; that duplicates hosted-runner minutes without adding signal.
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: app-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   web:
@@ -20,6 +25,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run build
@@ -36,6 +43,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
       - run: npm install --no-audit --no-fund
       - run: npm test
       - run: npm run typecheck

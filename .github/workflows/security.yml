@@ -1,13 +1,19 @@
 name: Security baseline
 
+# Security validation runs on proposed changes before merge. The same suite is
+# not repeated automatically after merge to main, avoiding duplicate hosted
+# runner usage. workflow_dispatch remains available for release/security checks.
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: security-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   secret-scan:

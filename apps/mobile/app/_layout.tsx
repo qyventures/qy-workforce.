@@ -6,11 +6,12 @@ import { supabase } from '../lib/supabase';
 
 export default function RootLayout() {
   useEffect(() => {
-    if (!supabase) return;
+    const client = supabase;
+    if (!client) return;
 
     const syncAuthRefresh = (state: AppStateStatus) => {
-      if (state === 'active') supabase.auth.startAutoRefresh();
-      else supabase.auth.stopAutoRefresh();
+      if (state === 'active') client.auth.startAutoRefresh();
+      else client.auth.stopAutoRefresh();
     };
 
     syncAuthRefresh(AppState.currentState);
@@ -18,7 +19,7 @@ export default function RootLayout() {
 
     return () => {
       subscription.remove();
-      supabase.auth.stopAutoRefresh();
+      client.auth.stopAutoRefresh();
     };
   }, []);
 

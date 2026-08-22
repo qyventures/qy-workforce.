@@ -31,7 +31,7 @@ begin
     where n.nspname='public' and p.proname in (
       'start_identity_session','complete_identity_verification_staging','get_site_margin_report',
       'create_shift_draft','open_shift','mark_identity_callback_received_staging',
-      'fail_identity_session_staging','expire_identity_sessions'
+      'fail_identity_session_staging','expire_identity_sessions','review_timesheet'
     ) and not p.prosecdef
   ) then raise exception 'security boundary RPC must remain security definer'; end if;
 
@@ -87,6 +87,15 @@ begin
     select 1 from information_schema.routines
     where routine_schema='public' and routine_name='expire_identity_sessions'
   ) then raise exception 'identity session expiry RPC required'; end if;
+
+  if not exists (
+    select 1
+    from pg_proc p
+    join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='review_timesheet'
+      and pg_get_functiondef(p.oid) ilike '%for update of t%'
+      and pg_get_functiondef(p.oid) ilike '%self review is not permitted%'
+  ) then raise exception 'timesheet review must lock the row and enforce separation of duties'; end if;
 end $$;
 
 rollback;

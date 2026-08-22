@@ -1,13 +1,8 @@
 name: QY Workforce VPS Agent Farm
 
+# Manual fallback only. The primary scheduler should run directly on the VPS
+# via systemd/cron so autonomous coding does not consume recurring GitHub Actions.
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/vps-agent-farm.yml'
-      - 'scripts/vps-agent-farm/**'
-  schedule:
-    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -45,8 +40,6 @@ jobs:
           chmod +x scripts/vps-agent-farm/run-agent.sh
           mkdir -p "$RUNNER_TEMP/qy-workforce-agent-logs"
 
-          # Code-writing agents are network/model heavy but usually light on local CPU.
-          # Run up to three at once to protect the 2 vCPU / 4 GB VPS from test/build spikes.
           roles=(mobile web ops backend)
           branches=(vps/mobile vps/web vps/ops vps/backend)
           pids=()

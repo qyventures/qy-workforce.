@@ -5,6 +5,7 @@ const cards = [
   { title: 'Find shifts', body: 'Browse eligible jobs matched to your verified roles and skills.', href: '/shifts' as const },
   { title: 'My shifts', body: 'See accepted work, attendance status and submitted timesheets.', href: '/my-shifts' as const },
   { title: 'Clock in / out', body: 'Verify attendance at the assigned site using geofenced location.', href: '/attendance' as const },
+  { title: 'Readiness', body: 'See identity, eligibility, role, vetting, training and consent checks in one place.', href: '/readiness' as const },
   { title: 'Profile & training', body: 'Complete onboarding, verification, certificates and required training.', href: '/onboarding' as const },
 ];
 
@@ -17,9 +18,9 @@ export default function HomeScreen() {
         <Text style={styles.subtitle}>Verified shifts, clear pay, simple attendance and one worker profile.</Text>
 
         <View style={styles.statusCard}>
-          <Text style={styles.statusTitle}>Onboarding status</Text>
-          <Text style={styles.statusValue}>Profile setup required</Text>
-          <Link href="/onboarding" style={styles.link}>Continue onboarding →</Link>
+          <Text style={styles.statusTitle}>Deployment readiness</Text>
+          <Text style={styles.statusValue}>Check your verified status</Text>
+          <Link href="/readiness" style={styles.link}>View readiness →</Link>
         </View>
 
         {cards.map((card) => (

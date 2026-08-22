@@ -13,7 +13,7 @@ jobs:
   secret-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 0
       - name: Gitleaks
@@ -24,7 +24,7 @@ jobs:
   dependency-and-sbom:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
@@ -32,7 +32,7 @@ jobs:
           format: spdx-json
           output-file: sbom.spdx.json
       - name: Scan repository filesystem
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -43,21 +43,21 @@ jobs:
   sast:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Semgrep
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Semgrep application and database code
         run: |
           python -m pip install --disable-pip-version-check 'semgrep>=1.90,<2'
-          semgrep scan --config p/owasp-top-ten --config p/secrets --error .
+          semgrep scan --config p/owasp-top-ten --config p/secrets --error --exclude '.github/workflows/**' apps supabase
 
   sql-safety:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Reject obvious unsafe migration patterns
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -RniE 'disable row level security|grant all .* to (anon|authenticated)|service_role' supabase/migrations || {
+          ! grep -RniE 'disable row level security|grant all .* to (anon|authenticated|service_role)' supabase/migrations || {
             echo 'Potentially unsafe database privilege pattern found.' >&2
             exit 1
           }

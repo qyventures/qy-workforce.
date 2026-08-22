@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, router } from 'expo-router';
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -10,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { isLikelyNetworkError } from '../lib/errors';
+import { readinessSummary } from '../lib/readiness.mjs';
 import { supabase } from '../lib/supabase';
 
 type Readiness = {
@@ -90,17 +92,7 @@ export default function ReadinessScreen() {
     void load();
   }, [load]);
 
-  const checks = [
-    ['Identity verified', state.identity_verified],
-    ['Residency verified', state.residency_verified],
-    ['Eligible to work', state.work_eligibility === 'eligible'],
-    ['Approved role', state.approved_roles > 0],
-    ['Required training complete', state.outstanding_training === 0],
-    ['Vetting clear', state.failed_vetting === 0],
-    ['Required consent recorded', state.required_consents_complete],
-  ] as const;
-
-  const readyCount = checks.filter(([, ok]) => ok).length;
+  const { checks, readyCount, totalCount, statusLabel } = readinessSummary(state as unknown as Record<string, unknown>);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -131,15 +123,23 @@ export default function ReadinessScreen() {
         {error ? (
           <View style={offline ? styles.warningBox : styles.errorBox} accessibilityLiveRegion="assertive">
             <Text style={offline ? styles.warningText : styles.error}>{error}</Text>
-            <Text style={styles.helper}>Pull down to refresh.</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading worker readiness status"
+              disabled={loading || refreshing}
+              onPress={() => void load(true)}
+              style={({ pressed }) => [styles.retryButton, pressed && styles.retryPressed]}
+            >
+              <Text style={styles.retryText}>{refreshing ? 'Retrying…' : 'Try again'}</Text>
+            </Pressable>
           </View>
         ) : null}
 
-        <View style={styles.card} accessible accessibilityLabel={`Worker status ${state.deployable ? 'deployable' : state.worker_status}. ${readyCount} of ${checks.length} readiness checks complete.`}>
+        <View style={styles.card} accessible accessibilityLabel={`Worker status ${state.deployable ? 'deployable' : state.worker_status}. ${readyCount} of ${totalCount} readiness checks complete.`}>
           <Text style={styles.cardTitle}>Current status</Text>
-          <Text style={styles.status}>{state.deployable ? 'DEPLOYABLE' : state.worker_status.toUpperCase()}</Text>
+          <Text style={styles.status}>{statusLabel}</Text>
           <Text style={styles.meta}>{state.approved_roles} approved role(s) · {state.verified_skills} verified skill(s)</Text>
-          <Text style={styles.progress}>{readyCount} of {checks.length} readiness checks complete</Text>
+          <Text style={styles.progress}>{readyCount} of {totalCount} readiness checks complete</Text>
         </View>
 
         <View style={styles.card}>
@@ -186,11 +186,13 @@ const styles = StyleSheet.create({
   rowLabel: { color: '#E5E5E5', fontSize: 15, flex: 1 },
   pass: { color: '#FFFFFF', fontWeight: '700' },
   pending: { color: '#A3A3A3', fontWeight: '600' },
-  errorBox: { borderWidth: 1, borderColor: '#7F1D1D', borderRadius: 14, padding: 14, gap: 6 },
-  warningBox: { borderWidth: 1, borderColor: '#854D0E', borderRadius: 14, padding: 14, gap: 6 },
+  errorBox: { borderWidth: 1, borderColor: '#7F1D1D', borderRadius: 14, padding: 14, gap: 10 },
+  warningBox: { borderWidth: 1, borderColor: '#854D0E', borderRadius: 14, padding: 14, gap: 10 },
   error: { color: '#FCA5A5', fontSize: 14, lineHeight: 20 },
   warningText: { color: '#FDE68A', fontSize: 14, lineHeight: 20 },
-  helper: { color: '#A3A3A3', fontSize: 13 },
+  retryButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: '#525252', backgroundColor: '#171717' },
+  retryPressed: { opacity: 0.75 },
+  retryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   primaryLink: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', paddingVertical: 14, minHeight: 44 },
   secondaryLink: { color: '#D4D4D4', fontSize: 15, fontWeight: '600', paddingVertical: 14, minHeight: 44 },
 });

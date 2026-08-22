@@ -30,7 +30,8 @@ begin
     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where n.nspname='public' and p.proname in (
       'start_identity_session','complete_identity_verification_staging','get_site_margin_report',
-      'create_shift_draft','open_shift'
+      'create_shift_draft','open_shift','mark_identity_callback_received_staging',
+      'fail_identity_session_staging','expire_identity_sessions'
     ) and not p.prosecdef
   ) then raise exception 'security boundary RPC must remain security definer'; end if;
 
@@ -59,6 +60,33 @@ begin
      or has_table_privilege('authenticated', 'public.shifts', 'DELETE') then
     raise exception 'authenticated role must not have direct shift write privileges';
   end if;
+
+  if has_table_privilege('authenticated', 'public.time_events', 'INSERT')
+     or has_table_privilege('authenticated', 'public.time_events', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.time_events', 'DELETE') then
+    raise exception 'authenticated role must not have direct attendance mutation privileges';
+  end if;
+
+  if has_table_privilege('authenticated', 'public.timesheets', 'INSERT')
+     or has_table_privilege('authenticated', 'public.timesheets', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.timesheets', 'DELETE') then
+    raise exception 'authenticated role must not have direct timesheet mutation privileges';
+  end if;
+
+  if has_table_privilege('authenticated', 'public.site_margin_summary', 'SELECT') then
+    raise exception 'authenticated role must not read full site margin view directly';
+  end if;
+
+  if not exists (
+    select 1 from pg_indexes
+    where schemaname='public' and tablename='identity_provider_sessions'
+      and indexname='uq_identity_provider_sessions_active'
+  ) then raise exception 'active identity sessions must be uniquely constrained'; end if;
+
+  if not exists (
+    select 1 from information_schema.routines
+    where routine_schema='public' and routine_name='expire_identity_sessions'
+  ) then raise exception 'identity session expiry RPC required'; end if;
 end $$;
 
 rollback;

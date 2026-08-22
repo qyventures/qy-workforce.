@@ -4,7 +4,15 @@ import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
 
 const POLICY_VERSION = '2026-08-22';
-const WORK_INTERESTS = ['Hospitality','F&B','Cleaning','Retail','Promoter','Events'];
+const WORK_INTERESTS = [
+  { label: 'Hospitality', code: 'banquet' },
+  { label: 'F&B Service', code: 'fnb_service' },
+  { label: 'F&B Kitchen', code: 'fnb_kitchen' },
+  { label: 'Cleaning', code: 'cleaner' },
+  { label: 'Retail', code: 'retail' },
+  { label: 'Promoter', code: 'promoter' },
+  { label: 'Events', code: 'event_crew' },
+];
 
 export default function OnboardingScreen() {
   const [fullName, setFullName] = useState('');
@@ -18,8 +26,8 @@ export default function OnboardingScreen() {
     [fullName, selected, consented, submitting]
   );
 
-  function toggleInterest(value: string) {
-    setSelected(current => current.includes(value) ? current.filter(x => x !== value) : [...current, value]);
+  function toggleInterest(code: string) {
+    setSelected(current => current.includes(code) ? current.filter(x => x !== code) : [...current, code]);
   }
 
   async function submit() {
@@ -35,48 +43,28 @@ export default function OnboardingScreen() {
     try {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
-      const user = sessionData.session?.user;
-      if (!user) {
+      if (!sessionData.session?.user) {
         router.replace('/sign-in');
         return;
       }
 
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          role: 'worker',
-          display_name: fullName.trim(),
-          phone: user.phone ?? null,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'id' });
-      if (profileError) throw profileError;
-
-      const { error: workerError } = await supabase
-        .from('worker_profiles')
-        .upsert({ user_id: user.id }, { onConflict: 'user_id' });
-      if (workerError) throw workerError;
-
-      // Work interests are intentionally kept in auth metadata only until a worker-role
-      // mapping is approved by ops. This avoids granting unverified role eligibility.
-      const { error: metadataError } = await supabase.auth.updateUser({
-        data: {
-          onboarding_email: email.trim() || null,
-          work_interests: selected,
-          onboarding_policy_version: POLICY_VERSION,
-        },
+      // A security-definer RPC controls exactly which worker fields can be created or changed.
+      // The app never receives direct write access to verification, eligibility or deployability status.
+      const { error: onboardingError } = await supabase.rpc('complete_worker_onboarding', {
+        p_display_name: fullName.trim(),
+        p_role_codes: selected,
+        p_policy_version: POLICY_VERSION,
       });
-      if (metadataError) throw metadataError;
+      if (onboardingError) throw onboardingError;
 
-      const consentRows = ['identity_verification','work_eligibility','location_clocking'].map(purpose => ({
-        worker_id: user.id,
-        purpose,
-        policy_version: POLICY_VERSION,
-        granted: true,
-        source: 'worker_app',
-      }));
-      const { error: consentError } = await supabase.from('worker_consents').insert(consentRows);
-      if (consentError) throw consentError;
+      // Optional email remains in the authenticated user's private metadata rather than
+      // being duplicated into workforce tables until a business purpose requires it.
+      if (email.trim()) {
+        const { error: metadataError } = await supabase.auth.updateUser({
+          data: { onboarding_email: email.trim() },
+        });
+        if (metadataError) throw metadataError;
+      }
 
       router.replace('/readiness');
     } catch (error) {
@@ -116,19 +104,19 @@ export default function OnboardingScreen() {
         />
 
         <Text style={styles.section}>Primary work interests</Text>
-        <Text style={styles.hint}>Choose at least one. Selection does not make you deployable until verification and role approval are complete.</Text>
+        <Text style={styles.hint}>Choose at least one. An interest is not an approved deployment role until verification, vetting and training requirements are complete.</Text>
         <View style={styles.tags}>
-          {WORK_INTERESTS.map(x => {
-            const active = selected.includes(x);
+          {WORK_INTERESTS.map(item => {
+            const active = selected.includes(item.code);
             return (
               <TouchableOpacity
-                key={x}
-                onPress={() => toggleInterest(x)}
+                key={item.code}
+                onPress={() => toggleInterest(item.code)}
                 style={[styles.tag, active && styles.tagActive]}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: active }}
               >
-                <Text style={[styles.tagText, active && styles.tagTextActive]}>{x}</Text>
+                <Text style={[styles.tagText, active && styles.tagTextActive]}>{item.label}</Text>
               </TouchableOpacity>
             );
           })}

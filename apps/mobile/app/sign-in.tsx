@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { describeMobileError, isLikelyNetworkError } from '../lib/errors';
+import { isLikelyNetworkError } from '../lib/errors';
 import { supabase } from '../lib/supabase';
 
 const RESEND_COOLDOWN_SECONDS = 45;

@@ -7,14 +7,20 @@ const assignmentId = '123e4567-e89b-42d3-a456-426614174000';
 test('allows known worker routes', () => {
   assert.equal(resolveAppRoute('qyworkforce://shifts'), '/shifts');
   assert.equal(resolveAppRoute('qyworkforce://earnings'), '/earnings');
+  assert.equal(resolveAppRoute('qyworkforce://notifications'), '/notifications');
 });
 
-test('allows assignment routes only with a valid assignment id', () => {
+test('allows assignment and attendance routes only with a valid assignment id', () => {
   assert.equal(
     resolveAppRoute(`qyworkforce://assignment?assignmentId=${assignmentId}`),
     `/assignment?assignmentId=${assignmentId}`,
   );
+  assert.equal(
+    resolveAppRoute(`qyworkforce://attendance?assignmentId=${assignmentId}`),
+    `/attendance?assignmentId=${assignmentId}`,
+  );
   assert.equal(resolveAppRoute('qyworkforce://assignment?assignmentId=bad'), null);
+  assert.equal(resolveAppRoute('qyworkforce://attendance?assignmentId=bad'), null);
   assert.equal(resolveAppRoute('qyworkforce://assignment'), null);
 });
 

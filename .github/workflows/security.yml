@@ -86,4 +86,14 @@ jobs:
           grep -q 'revoke insert, update, delete on public.worker_roles from authenticated' supabase/migrations/0020_ops_worker_review_controls.sql
           grep -q 'revoke insert, update, delete on public.worker_vetting from authenticated' supabase/migrations/0020_ops_worker_review_controls.sql
           test -f supabase/tests/worker_review_security_checks.sql
+          if test -f supabase/migrations/0022_retention_enforcement.sql; then
+            grep -q "v_role <> 'admin'" supabase/migrations/0022_retention_enforcement.sql
+            grep -q "auth.role() = 'service_role'" supabase/migrations/0022_retention_enforcement.sql
+            grep -q 'retention_hold=true' <(tr -d ' ' < supabase/migrations/0022_retention_enforcement.sql)
+            grep -q 'latitude=null' <(tr -d ' ' < supabase/migrations/0022_retention_enforcement.sql)
+            grep -q 'device_fingerprint_hash=null' <(tr -d ' ' < supabase/migrations/0022_retention_enforcement.sql)
+            grep -q 'provider_subject_hash=null' <(tr -d ' ' < supabase/migrations/0022_retention_enforcement.sql)
+            grep -q 'revoke all on function public.run_retention_maintenance(boolean,integer) from public' supabase/migrations/0022_retention_enforcement.sql
+            test -f supabase/tests/retention_security_checks.sql
+          fi
           echo 'Critical workforce security invariants present.'

@@ -46,10 +46,16 @@ Only Finance/Admin can create, lock or export payroll batches. A batch contains 
 
 The older `site_margin_summary` view is no longer directly selectable by the authenticated role; privileged reporting should use the RPC so application-role authorization is enforced at the server boundary.
 
-## Retention
+## Retention and privacy requests
 
 Retention periods are registry-driven and intentionally reviewable before production. Identity verification storage is limited to normalized outcomes/evidence metadata; unnecessary raw identity data should not be retained.
 
+Workers can submit `access`, `export` and `erasure` requests only through the audited `request_privacy_action(...)` RPC. Duplicate active requests of the same type are blocked. Workers may read their own request status through RLS, while only Admin/Auditor may read the operational queue.
+
+`review_privacy_request(...)` is Admin-only, locks the request row before transition, prevents self-review, requires reasons for rejection/cancellation and records the decision in the audit trail. Erasure cannot be marked completed while a retention hold is active.
+
+The V1 backend deliberately does not hard-delete payroll, attendance or audit records when an erasure request is submitted. Erasure is a controlled workflow requiring a retention/legal review first. A later production purge/anonymisation job should operate only on approved requests after any statutory, dispute, payroll and security retention obligations have expired.
+
 ## Staging validation
 
-After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions and demand tables, absence of raw token/national-ID columns, separation of identity/residency/eligibility fields, required SECURITY DEFINER boundaries, no direct authenticated mutation privileges for shifts/attendance/timesheets, no broad margin-view access, single-active identity-session enforcement, identity retention policy, and concurrency/separation-of-duties controls on timesheet review.
+After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions, demand tables and privacy requests; absence of raw token/national-ID columns; separation of identity/residency/eligibility fields; required SECURITY DEFINER boundaries; no direct authenticated mutation privileges for shifts/attendance/timesheets/privacy requests; no broad margin-view access; single-active identity-session enforcement; required retention policies; concurrency/separation-of-duties controls on timesheet review; and locked, retention-aware privacy request review.

@@ -6,6 +6,12 @@ alter table public.sites enable row level security;
 alter table public.roles enable row level security;
 alter table public.shifts enable row level security;
 
+-- Defense in depth: demand configuration is writable only through audited server-side RPCs.
+revoke insert, update, delete on table public.clients from anon, authenticated;
+revoke insert, update, delete on table public.sites from anon, authenticated;
+revoke insert, update, delete on table public.roles from anon, authenticated;
+revoke insert, update, delete on table public.shifts from anon, authenticated;
+
 -- Privileged staff may inspect demand configuration; workers continue to use scoped RPCs.
 create policy "privileged read clients" on public.clients
 for select using (public.is_privileged());
@@ -161,5 +167,4 @@ $$;
 revoke all on function public.open_shift(uuid) from public;
 grant execute on function public.open_shift(uuid) to authenticated;
 
--- No direct authenticated writes to clients/sites/roles/shifts are granted.
 -- Workers discover open shifts through get_available_shifts() and accept them through secure RPCs.

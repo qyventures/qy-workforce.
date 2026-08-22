@@ -1,0 +1,7 @@
+const rows=[
+ {client:'Harbour Hotel Group',site:'Marina Bay',active:34,fill:'94%',margin:'18.4%'},
+ {client:'City Living',site:'Bugis',active:22,fill:'100%',margin:'21.1%'},
+ {client:'Lifestyle Retailer',site:'Orchard',active:16,fill:'89%',margin:'16.7%'}
+];
+export default function ClientsPage(){return <section style={{padding:32,background:'#f5f7fb',minHeight:'100vh',color:'#101828'}}><h1>Clients & sites</h1><p>Track staffing coverage and site economics without mixing payroll or identity permissions.</p><div style={{overflowX:'auto',marginTop:20}}><table style={table}><thead><tr><th style={th}>Client</th><th style={th}>Site</th><th style={th}>Active workers</th><th style={th}>Fill rate</th><th style={th}>Estimated GM</th></tr></thead><tbody>{rows.map(r=><tr key={r.client+r.site}><td style={tdStrong}>{r.client}</td><td style={td}>{r.site}</td><td style={td}>{r.active}</td><td style={td}>{r.fill}</td><td style={td}>{r.margin}</td></tr>)}</tbody></table></div><p style={note}>Staging figures only. Production margin views are restricted to authorised operations/finance roles.</p></section>}
+const table={width:'100%',borderCollapse:'collapse' as const,background:'#fff',border:'1px solid #e8ecf2'}; const th={textAlign:'left' as const,padding:12,color:'#667085',borderBottom:'1px solid #eaecf0'}; const td={padding:14,borderBottom:'1px solid #f0f2f5',color:'#475467'}; const tdStrong={...td,color:'#101828',fontWeight:700}; const note={fontSize:12,color:'#98a2b3',marginTop:18};

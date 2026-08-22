@@ -1,0 +1,7 @@
+const workers=[
+ {name:'Worker 1042',roles:'Banquet · F&B',readiness:'Deployable',training:'Current'},
+ {name:'Worker 1187',roles:'Retail',readiness:'Review',training:'Missing module'},
+ {name:'Worker 1215',roles:'Cleaning',readiness:'Deployable',training:'Current'}
+];
+export default function WorkersPage(){return <section style={{padding:32,background:'#f5f7fb',minHeight:'100vh',color:'#101828'}}><h1>Worker review</h1><p>Review readiness without exposing unnecessary identity data in the operations queue.</p><div style={{overflowX:'auto',marginTop:20}}><table style={table}><thead><tr><th style={th}>Worker</th><th style={th}>Role interests</th><th style={th}>Readiness</th><th style={th}>Training</th></tr></thead><tbody>{workers.map(w=><tr key={w.name}><td style={tdStrong}>{w.name}</td><td style={td}>{w.roles}</td><td style={td}>{w.readiness}</td><td style={td}>{w.training}</td></tr>)}</tbody></table></div><p style={note}>Operational aliases are used in staging. Production access to personal data remains least-privilege and purpose-limited.</p></section>}
+const table={width:'100%',borderCollapse:'collapse' as const,background:'#fff',border:'1px solid #e8ecf2',borderRadius:14}; const th={textAlign:'left' as const,padding:12,color:'#667085',borderBottom:'1px solid #eaecf0'}; const td={padding:14,borderBottom:'1px solid #f0f2f5',color:'#475467'}; const tdStrong={...td,color:'#101828',fontWeight:700}; const note={fontSize:12,color:'#98a2b3',marginTop:18};

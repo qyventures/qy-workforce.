@@ -1,0 +1,7 @@
+const exceptions=[
+ {type:'Geofence',count:3,severity:'Review now',detail:'Clock-in recorded outside configured site radius'},
+ {type:'Duration',count:6,severity:'Review',detail:'Attendance exceeds scheduled duration by more than 30 minutes'},
+ {type:'Training',count:2,severity:'Tomorrow',detail:'Assigned workers missing a required training record'}
+];
+export default function ExceptionsPage(){return <section style={{padding:32,background:'#f5f7fb',minHeight:'100vh',color:'#101828'}}><h1>Attendance & compliance exceptions</h1><p>Prioritised queues only. Resolve anomalies without exposing unrelated worker information.</p><div style={{display:'grid',gap:14,marginTop:22}}>{exceptions.map(e=><article key={e.type} style={card}><div style={{display:'flex',justifyContent:'space-between',gap:12}}><strong>{e.type}</strong><span style={pill}>{e.count} · {e.severity}</span></div><p style={{color:'#667085',marginBottom:0}}>{e.detail}</p></article>)}</div><p style={note}>Production resolution actions should require an authenticated supervisor/ops role and create an audit event.</p></section>}
+const card={background:'#fff',padding:18,border:'1px solid #e8ecf2',borderRadius:14}; const pill={padding:'4px 8px',borderRadius:999,background:'#fff7ed',color:'#c2410c',fontSize:12,fontWeight:700}; const note={fontSize:12,color:'#98a2b3',marginTop:18};

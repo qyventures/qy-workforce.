@@ -34,6 +34,21 @@ if (!productionScriptSource || productionScriptSource.includes("'unsafe-eval'"))
   process.exit(1);
 }
 
+const opsLayoutPath = path.join(root, 'app', 'ops', 'layout.tsx');
+const opsLayout = fs.readFileSync(opsLayoutPath, 'utf8');
+const requiredOpsMetadata = [
+  'robots:',
+  'index: false',
+  'follow: false',
+  'nocache: true',
+  'noimageindex: true',
+];
+const missingOpsMetadata = requiredOpsMetadata.filter((snippet) => !opsLayout.includes(snippet));
+if (missingOpsMetadata.length) {
+  console.error(`Ops indexing regression: missing ${missingOpsMetadata.join(', ')}`);
+  process.exit(1);
+}
+
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const target = path.join(dir, entry.name);
@@ -67,4 +82,4 @@ if (secretLeaks.length) {
   process.exit(1);
 }
 
-console.log('Security header and client-secret checks passed.');
+console.log('Security header, Ops indexing and client-secret checks passed.');

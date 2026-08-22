@@ -32,7 +32,7 @@ begin
       'start_identity_session','complete_identity_verification_staging','get_site_margin_report',
       'create_shift_draft','open_shift','mark_identity_callback_received_staging',
       'fail_identity_session_staging','expire_identity_sessions','review_timesheet',
-      'request_privacy_action','review_privacy_request'
+      'request_privacy_action','review_privacy_request','accept_shift'
     ) and not p.prosecdef
   ) then raise exception 'security boundary RPC must remain security definer'; end if;
 
@@ -126,6 +126,16 @@ begin
       and pg_get_functiondef(p.oid) ilike '%self-review is not permitted%'
       and pg_get_functiondef(p.oid) ilike '%retention hold%'
   ) then raise exception 'privacy review must lock rows, block self-review and respect retention holds'; end if;
+
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='accept_shift'
+      and p.prosecdef
+      and pg_get_functiondef(p.oid) ilike '%pg_advisory_xact_lock%'
+      and pg_get_functiondef(p.oid) ilike '%for update%'
+      and pg_get_functiondef(p.oid) ilike '%worker has overlapping shift%'
+      and pg_get_functiondef(p.oid) ilike '%shift full%'
+  ) then raise exception 'shift acceptance must serialize worker and shift capacity and reject overlap'; end if;
 end $$;
 
 rollback;

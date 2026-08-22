@@ -62,8 +62,20 @@ Workers can submit `access`, `export` and `erasure` requests only through the au
 
 `review_privacy_request(...)` is Admin-only, locks the request row before transition, prevents self-review, requires reasons for rejection/cancellation and records the decision in the audit trail. Erasure cannot be marked completed while a retention hold is active.
 
-The V1 backend deliberately does not hard-delete payroll, attendance or audit records when an erasure request is submitted. Erasure is a controlled workflow requiring a retention/legal review first. A later production purge/anonymisation job should operate only on approved requests after any statutory, dispute, payroll and security retention obligations have expired.
+The V1 backend deliberately does not hard-delete payroll, attendance or audit records when an erasure request is submitted. Erasure is a controlled workflow requiring a retention/legal review first.
+
+`run_retention_maintenance(execute,batch_limit)` turns the retention registry into an executable, audited boundary. Auditor/Admin/service-role callers can preview eligible records; destructive/minimising execution is restricted to Admin or service-role scheduling. Every run stores the policy snapshot, batch cap and result counts in `retention_runs` and emits an audit event.
+
+Execution is intentionally conservative:
+
+- public employer/worker-interest leads older than the configured `public_leads` period are deleted in bounded batches;
+- precise attendance latitude/longitude, accuracy and device correlation hashes are removed after the `location_events` period while preserving event chronology and the recorded geofence outcome needed for payroll/dispute evidence;
+- historical identity-verification rows are minimised after the configured period by removing provider-subject correlation and retaining only normalized identity/residency/work-eligibility outcomes;
+- completed/failed/expired mock/staging identity sessions are deleted after 30 days;
+- worker-linked retention maintenance skips any worker with an active retention hold.
+
+Audit events, privacy-request decision evidence, payroll and timesheets remain manual/legal-review classes in V1 and are not automatically deleted by the maintenance job. This prevents the system from silently destroying statutory, dispute, payroll or security evidence before the production retention schedule has been legally approved.
 
 ## Staging validation
 
-After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions, demand tables and privacy requests; absence of raw token/national-ID columns; separation of identity/residency/eligibility fields; required SECURITY DEFINER boundaries; no direct authenticated mutation privileges for shifts/attendance/timesheets/privacy requests; no broad margin-view access; single-active identity-session enforcement; required retention policies; concurrency/separation-of-duties controls on timesheet review; locked, retention-aware privacy request review; concurrency-safe shift acceptance; and a shared live deployability predicate across readiness, shift discovery and shift acceptance, including consent and training-expiry enforcement.
+After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql`, `supabase/tests/worker_review_security_checks.sql` and `supabase/tests/retention_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions, demand tables, privacy requests and retention evidence; absence of raw token/national-ID columns; separation of identity/residency/eligibility fields; required SECURITY DEFINER boundaries; no direct authenticated mutation privileges for shifts/attendance/timesheets/privacy requests/retention runs; no broad margin-view access; single-active identity-session enforcement; required retention policies; concurrency/separation-of-duties controls on timesheet review; locked, retention-aware privacy request review; concurrency-safe shift acceptance; a shared live deployability predicate across readiness, shift discovery and shift acceptance; and bounded, hold-aware retention minimisation with manual/legal-review classes preserved.

@@ -1,6 +1,7 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import type { CSSProperties, FormEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 
 type MarginRow = {
@@ -141,7 +142,7 @@ export default function ClientsPage() {
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, CSSProperties> = {
   page: { padding: 32, background: '#f5f7fb', minHeight: '100vh', color: '#101828' },
   header: { maxWidth: 1200, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' },
   eyebrow: { color: '#4d63ff', fontWeight: 800, fontSize: 12, letterSpacing: 1.2 },
@@ -149,7 +150,7 @@ const styles: Record<string, React.CSSProperties> = {
   sub: { margin: 0, color: '#667085', maxWidth: 760 },
   liveBadge: { borderRadius: 999, padding: '7px 10px', background: '#ecfdf3', color: '#027a48', fontSize: 12, fontWeight: 750 },
   stagingBadge: { borderRadius: 999, padding: '7px 10px', background: '#fff7ed', color: '#b54708', fontSize: 12, fontWeight: 750 },
-  filters: { maxWidth: 1200, margin: '0 auto 16px', display: 'flex', gap: 12, alignItems: 'end', flexWrap: 'wrap' },
+  filters: { maxWidth: 1200, margin: '0 auto 16px', display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' },
   label: { display: 'grid', gap: 6, color: '#475467', fontSize: 13, fontWeight: 650 },
   input: { minHeight: 44, border: '1px solid #d0d5dd', borderRadius: 10, background: '#fff', padding: '0 12px', fontSize: 16, color: '#101828' },
   button: { minHeight: 44, border: 0, borderRadius: 10, background: '#111827', color: '#fff', padding: '0 16px', fontWeight: 750, cursor: 'pointer' },

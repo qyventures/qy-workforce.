@@ -62,3 +62,22 @@ jobs:
             exit 1
           }
           echo 'SQL privilege guard passed.'
+
+  workforce-security-invariants:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Assert critical workforce security boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'pg_advisory_xact_lock' supabase/migrations/0018_shift_acceptance_conflict_controls.sql
+          grep -q 'for update' supabase/migrations/0018_shift_acceptance_conflict_controls.sql
+          grep -q 'worker_has_deployment_prerequisites' supabase/migrations/0019_live_deployability_guard.sql
+          grep -q "purpose = 'location_clocking'" supabase/migrations/0019_live_deployability_guard.sql
+          grep -q 'self-review not permitted' supabase/migrations/0020_ops_worker_review_controls.sql
+          grep -q 'revoke update on public.worker_profiles from authenticated' supabase/migrations/0020_ops_worker_review_controls.sql
+          grep -q 'revoke insert, update, delete on public.worker_roles from authenticated' supabase/migrations/0020_ops_worker_review_controls.sql
+          grep -q 'revoke insert, update, delete on public.worker_vetting from authenticated' supabase/migrations/0020_ops_worker_review_controls.sql
+          test -f supabase/tests/worker_review_security_checks.sql
+          echo 'Critical workforce security invariants present.'

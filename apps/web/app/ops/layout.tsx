@@ -9,6 +9,7 @@ const nav = [
   { href: '/ops/exceptions', label: 'Exceptions' },
   { href: '/ops/approvals', label: 'Approvals' },
   { href: '/ops/timesheets', label: 'Timesheets' },
+  { href: '/ops/reports', label: 'Fulfilment & Margin' },
   { href: '/ops/payroll', label: 'Payroll' },
 ];
 

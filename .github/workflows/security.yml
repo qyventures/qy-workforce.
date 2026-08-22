@@ -121,4 +121,12 @@ jobs:
             grep -q 'revoke all on function public.review_privacy_request(uuid,text,text,boolean) from public' supabase/migrations/0026_privacy_request_state_machine.sql
             test -f supabase/tests/privacy_request_state_machine_checks.sql
           fi
+          if test -f supabase/migrations/202608230721_shift_terms_integrity.sql; then
+            grep -q 'accepted shift terms are immutable' supabase/migrations/202608230721_shift_terms_integrity.sql
+            grep -q 'headcount cannot be lower than active accepted assignments' supabase/migrations/202608230721_shift_terms_integrity.sql
+            grep -q 'accepted_at is not null' supabase/migrations/202608230721_shift_terms_integrity.sql
+            grep -q 'cancelled_at is null' supabase/migrations/202608230721_shift_terms_integrity.sql
+            grep -q 'revoke all on function public.guard_accepted_shift_terms() from public' supabase/migrations/202608230721_shift_terms_integrity.sql
+            test -f supabase/tests/shift_terms_integrity_checks.sql
+          fi
           echo 'Critical workforce security invariants present.'

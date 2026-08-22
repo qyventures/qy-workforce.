@@ -70,6 +70,23 @@ begin
      or has_table_privilege('authenticated', 'public.timesheets', 'DELETE') then
     raise exception 'authenticated role must not have direct timesheet mutation privileges';
   end if;
+  if has_table_privilege('authenticated', 'public.shift_assignments', 'INSERT')
+     or has_table_privilege('authenticated', 'public.shift_assignments', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.shift_assignments', 'DELETE') then
+    raise exception 'assignment mutation must be RPC-only';
+  end if;
+
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='cancel_shift_assignment'
+      and p.prosecdef
+      and pg_get_functiondef(p.oid) ilike '%for update of a, sh%'
+      and pg_get_functiondef(p.oid) ilike '%coalesce(public.is_ops(), false)%'
+      and pg_get_functiondef(p.oid) ilike '%v_worker <> v_actor and not v_is_ops%'
+      and pg_get_functiondef(p.oid) ilike '%attendance cannot be cancelled%'
+      and pg_get_functiondef(p.oid) ilike '%timesheet cannot be cancelled%'
+      and pg_get_functiondef(p.oid) ilike '%shift_assignment.cancelled%'
+  ) then raise exception 'assignment cancellation must lock, authorise, preserve worked records and audit'; end if;
   if has_table_privilege('authenticated', 'public.site_margin_summary', 'SELECT') then
     raise exception 'authenticated role must not read full site margin view directly';
   end if;

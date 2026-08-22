@@ -23,6 +23,7 @@ This checklist tracks staging and production hardening for the worker mobile app
 
 - OTP endpoints require provider-side rate limiting and abuse monitoring before production.
 - Shift acceptance, attendance events, identity callbacks, timesheet reviews and payroll transitions require idempotency/concurrency protection.
+- Assignment cancellation must remain RPC-only, owner/Ops-authorised and row-locked. It must not cancel assignments after attendance or timesheet creation, and every effective cancellation requires a bounded reason and audit event.
 - Identity state/nonce hashes must be single-use and expired sessions rejected.
 - Clock events must reject invalid order, duplicate/replayed events and unsafe accuracy/mock-location signals where available.
 

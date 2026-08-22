@@ -96,4 +96,12 @@ jobs:
             grep -q 'revoke all on function public.run_retention_maintenance(boolean,integer) from public' supabase/migrations/0022_retention_enforcement.sql
             test -f supabase/tests/retention_security_checks.sql
           fi
+          if test -f supabase/migrations/0024_audit_metadata_minimisation.sql; then
+            grep -q "'nric'" supabase/migrations/0024_audit_metadata_minimisation.sql
+            grep -q "'access_token'" supabase/migrations/0024_audit_metadata_minimisation.sql
+            grep -q 'audit_metadata_minimisation_guard' supabase/migrations/0024_audit_metadata_minimisation.sql
+            grep -q 'revoke all on function public.audit_metadata_contains_sensitive_keys(jsonb) from anon, authenticated' supabase/migrations/0024_audit_metadata_minimisation.sql
+            grep -q 'revoke all on function public.enforce_audit_metadata_minimisation() from anon, authenticated' supabase/migrations/0024_audit_metadata_minimisation.sql
+            test -f supabase/tests/audit_metadata_minimisation_checks.sql
+          fi
           echo 'Critical workforce security invariants present.'

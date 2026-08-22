@@ -32,7 +32,7 @@ begin
       'start_identity_session','complete_identity_verification_staging','get_site_margin_report',
       'create_shift_draft','open_shift','mark_identity_callback_received_staging',
       'fail_identity_session_staging','expire_identity_sessions','review_timesheet',
-      'request_privacy_action','review_privacy_request'
+      'request_privacy_action','review_privacy_request','get_attendance_exception_queue'
     ) and not p.prosecdef
   ) then raise exception 'security boundary RPC must remain security definer'; end if;
 
@@ -89,6 +89,15 @@ begin
       and pg_get_functiondef(p.oid) ilike '%for update of t%'
       and pg_get_functiondef(p.oid) ilike '%self review is not permitted%'
   ) then raise exception 'timesheet review must lock the row and enforce separation of duties'; end if;
+
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'get_attendance_exception_queue'
+      and p.prosecdef
+      and pg_get_functiondef(p.oid) ilike '%Worker #%'
+      and pg_get_functiondef(p.oid) not ilike '%display_name%'
+      and pg_get_functiondef(p.oid) ilike '%supervisor_sites%'
+  ) then raise exception 'attendance exception queue must be scoped and pseudonymous'; end if;
 
   if not exists (
     select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace

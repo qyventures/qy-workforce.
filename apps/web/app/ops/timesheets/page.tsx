@@ -39,7 +39,7 @@ export default function TimesheetQueue() {
     if (error) {
       setMessage(error.message.includes('JWT') || error.message.includes('authorised')
         ? 'Sign in with an authorised supervisor or Ops account to view the live queue.'
-        : `Unable to load queue: ${error.message}`);
+        : 'Unable to load the queue. Please try again.');
       setRows([]);
     } else {
       setRows((data ?? []) as QueueRow[]);
@@ -55,6 +55,9 @@ export default function TimesheetQueue() {
     if (decision === 'reject') {
       reason = window.prompt('Reason for rejection (required; max 500 characters):')?.trim() || null;
       if (!reason) return;
+    } else {
+      const row = rows.find((item) => item.timesheet_id === id);
+      if (row?.exception_label !== 'Clean' && !window.confirm(`This record has a ${row.exception_label.toLowerCase()}. Confirm that you have reviewed the exception before approving.`)) return;
     }
 
     setBusyId(id);
@@ -65,7 +68,7 @@ export default function TimesheetQueue() {
       p_rejection_reason: reason,
     });
     if (error) {
-      setMessage(`Action failed: ${error.message}`);
+      setMessage('The decision was not saved. The record may no longer be awaiting review or you may not be permitted to review it.');
     } else {
       setRows((current) => current.filter((r) => r.timesheet_id !== id));
       setMessage(decision === 'approve' ? 'Timesheet approved and audit event recorded.' : 'Timesheet rejected and returned for correction.');

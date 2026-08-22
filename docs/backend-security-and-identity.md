@@ -38,7 +38,9 @@ Authenticated clients no longer have direct INSERT/UPDATE/DELETE privileges on `
 
 ## Payroll
 
-Only Finance/Admin can create, lock or export payroll batches. A batch contains approved timesheets only. Locking a batch moves its included timesheets to `payroll_ready`. Export requires a locked batch and records format/count/checksum in the audit trail. Payment-rail credentials and bank credentials remain outside this database.
+Only Finance/Admin can create, lock or export payroll batches. Authenticated clients have no direct mutation privileges on payroll batches or items; all changes use audited RPCs. Locking is serialized, rejects empty batches, revalidates that every item is still approved, prevents a timesheet from entering multiple locked/exported batches, and moves included timesheets to `payroll_ready`.
+
+Export requires a locked batch. Finalization verifies a canonical SHA-256 checksum and checks the supplied row count against the database item count under a row lock. Recorded export evidence is immutable; an exact retry is idempotent, while a changed format, checksum or count is rejected. The older export finalizer without evidence is not callable by authenticated users. Payment-rail credentials and bank credentials remain outside this database.
 
 ## Margin reporting
 
@@ -58,4 +60,4 @@ The V1 backend deliberately does not hard-delete payroll, attendance or audit re
 
 ## Staging validation
 
-After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` and `supabase/tests/worker_review_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions, demand tables and privacy requests; absence of raw token/national-ID columns; separation of identity/residency/eligibility fields; required SECURITY DEFINER boundaries; no direct authenticated mutation privileges for shifts/attendance/timesheets/privacy requests or worker qualifications; no broad margin-view access; single-active identity-session enforcement; required retention policies; concurrency/separation-of-duties controls on timesheet and worker-training review; declared-interest enforcement for role approval; and locked, retention-aware privacy request review.
+After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` and `supabase/tests/worker_review_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions, demand tables and privacy requests; absence of raw token/national-ID columns; separation of identity/residency/eligibility fields; required SECURITY DEFINER boundaries; no direct authenticated mutation privileges for shifts/attendance/timesheets/payroll/privacy requests or worker qualifications; no broad margin-view access; single-active identity-session enforcement; required retention policies; concurrency/separation-of-duties controls on timesheet and worker-training review; declared-interest enforcement for role approval; serialized duplicate-safe payroll locking; immutable, count-bound export evidence; and locked, retention-aware privacy request review.

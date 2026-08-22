@@ -74,6 +74,37 @@ begin
     raise exception 'authenticated role must not read full site margin view directly';
   end if;
 
+  if has_table_privilege('authenticated', 'public.payroll_batches', 'INSERT')
+     or has_table_privilege('authenticated', 'public.payroll_batches', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.payroll_batches', 'DELETE')
+     or has_table_privilege('authenticated', 'public.payroll_batch_items', 'INSERT')
+     or has_table_privilege('authenticated', 'public.payroll_batch_items', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.payroll_batch_items', 'DELETE') then
+    raise exception 'payroll mutation must be RPC-only';
+  end if;
+
+  if has_function_privilege('authenticated', 'public.mark_payroll_batch_exported(uuid)', 'EXECUTE') then
+    raise exception 'legacy payroll export finalizer must not be callable';
+  end if;
+
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='lock_payroll_batch'
+      and pg_get_functiondef(p.oid) ilike '%pg_advisory_xact_lock%'
+      and pg_get_functiondef(p.oid) ilike '%already belongs to a locked payroll batch%'
+      and pg_get_functiondef(p.oid) ilike '%not approved%'
+  ) then raise exception 'payroll locking must serialize and reject duplicate or unapproved timesheets'; end if;
+
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='record_payroll_export'
+      and p.prosecdef
+      and pg_get_functiondef(p.oid) ilike '%for update%'
+      and pg_get_functiondef(p.oid) ilike '%[0-9a-f]{64}%'
+      and pg_get_functiondef(p.oid) ilike '%export count does not match payroll batch%'
+      and pg_get_functiondef(p.oid) ilike '%export evidence is immutable%'
+  ) then raise exception 'payroll export must lock, validate count/checksum and preserve immutable evidence'; end if;
+
   if not exists (
     select 1 from pg_indexes where schemaname='public' and tablename='identity_provider_sessions'
       and indexname='uq_identity_provider_sessions_active'

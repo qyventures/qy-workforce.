@@ -34,4 +34,37 @@ if (!productionScriptSource || productionScriptSource.includes("'unsafe-eval'"))
   process.exit(1);
 }
 
-console.log('Security header checks passed.');
+function walk(dir) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const target = path.join(dir, entry.name);
+    if (entry.isDirectory()) return walk(target);
+    return /\.(?:js|jsx|mjs|ts|tsx)$/.test(entry.name) ? [target] : [];
+  });
+}
+
+const clientSourceRoots = ['app', 'lib']
+  .map((dir) => path.join(root, dir))
+  .filter((dir) => fs.existsSync(dir));
+
+const forbiddenClientSecretMarkers = [
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SERVICE_ROLE_KEY',
+  'service_role',
+  'service-role',
+];
+
+const secretLeaks = clientSourceRoots
+  .flatMap((dir) => walk(dir))
+  .flatMap((file) => {
+    const source = fs.readFileSync(file, 'utf8');
+    return forbiddenClientSecretMarkers
+      .filter((marker) => source.includes(marker))
+      .map((marker) => `${path.relative(root, file)}:${marker}`);
+  });
+
+if (secretLeaks.length) {
+  console.error(`Client secret regression: privileged Supabase/service-role marker found in ${secretLeaks.join(', ')}`);
+  process.exit(1);
+}
+
+console.log('Security header and client-secret checks passed.');

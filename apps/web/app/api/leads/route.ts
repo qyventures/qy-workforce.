@@ -59,12 +59,29 @@ export async function POST(request: NextRequest) {
     return jsonResponse({ ok: false, message: 'Enquiries are temporarily unavailable.' }, 503);
   }
 
-  let body: Record<string, unknown>;
+  // Content-Length is advisory and can be absent or incorrect. Enforce the same
+  // ceiling against the bytes actually received before parsing JSON so a client
+  // cannot bypass the public endpoint limit by omitting that header.
+  let rawBody: string;
   try {
-    body = await request.json();
+    rawBody = await request.text();
   } catch {
     return jsonResponse({ ok: false }, 400);
   }
+  if (new TextEncoder().encode(rawBody).byteLength > MAX_REQUEST_BYTES) {
+    return jsonResponse({ ok: false, message: 'Request is too large.' }, 413);
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawBody);
+  } catch {
+    return jsonResponse({ ok: false }, 400);
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return jsonResponse({ ok: false }, 400);
+  }
+  const body = parsed as Record<string, unknown>;
 
   // Honeypot field. Do not reveal to bots why the request was discarded.
   if (text(body.website, 200)) return jsonResponse({ ok: true });

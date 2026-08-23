@@ -27,8 +27,31 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
   const industry = getIndustry(slug);
   if (!industry) notFound();
 
+  const canonicalUrl = `https://workforce.qyvent.com/industries/${industry.id}`;
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    name: `${industry.name} staffing by QY Workforce`,
+    description: industry.employer,
+    url: canonicalUrl,
+    provider: {
+      '@type': 'Organization',
+      name: 'QY Workforce',
+      url: 'https://workforce.qyvent.com',
+    },
+    areaServed: {
+      '@type': 'Country',
+      name: 'Singapore',
+    },
+    serviceType: `${industry.name} staffing and workforce operations`,
+  };
+
   return (
     <main style={{ minHeight: '100vh', background: '#F7F8FB', color: '#101828', padding: '56px 24px 72px' }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }}
+      />
       <section style={{ maxWidth: 1080, margin: '0 auto' }}>
         <nav aria-label="Breadcrumb" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', color: '#667085', fontSize: 14 }}>
           <a href="/" style={{ color: '#344054', textDecoration: 'none', fontWeight: 750 }}>QY Workforce</a>

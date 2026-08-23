@@ -46,11 +46,9 @@ if (!industryPage.includes('generateStaticParams') || !industryPage.includes('no
 }
 
 const homePage = fs.readFileSync(path.join(root, 'app/page.tsx'), 'utf8');
-for (const slug of industrySlugs) {
-  if (!homePage.includes(`href={\`/industries/${'${id}'}\`}`) && !homePage.includes(`/industries/${slug}`)) {
-    console.error(`Homepage industry route regression: missing landing-page link coverage for ${slug}`);
-    process.exit(1);
-  }
+if (!homePage.includes('href={`/industries/${id}`}')) {
+  console.error('Homepage industry route regression: industry cards must link to dedicated landing pages.');
+  process.exit(1);
 }
 if (homePage.includes('href={`/industries#${id}`}')) {
   console.error('Homepage industry route regression: legacy anchor links must not replace dedicated industry landing pages.');

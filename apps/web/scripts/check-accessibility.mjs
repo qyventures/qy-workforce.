@@ -27,6 +27,30 @@ for (const [label, pattern] of opsRequirements) {
   }
 }
 
+const conversionForms = [
+  ['employer', read('app/employers/page.tsx'), ['companyName', 'contactName', 'email', 'phone', 'industry', 'manpowerNeed']],
+  ['worker', read('app/workers/page.tsx'), ['fullName', 'email', 'phone', 'workInterest']],
+];
+
+for (const [journey, source, fields] of conversionForms) {
+  for (const field of fields) {
+    const controlPattern = new RegExp(`<(?:input|select|textarea)[^>]+name=["']${field}["']`);
+    const labelledControlPattern = new RegExp(`<label[^>]*>[\\s\\S]{0,220}<(?:input|select|textarea)[^>]+name=["']${field}["']`);
+    if (!controlPattern.test(source) || !labelledControlPattern.test(source)) {
+      console.error(`Accessibility regression: ${journey} conversion field ${field} must have a persistent label.`);
+      process.exit(1);
+    }
+  }
+  if (!/aria-busy=\{state===["']sending["']\}/.test(source)) {
+    console.error(`Accessibility regression: ${journey} submit state must expose aria-busy.`);
+    process.exit(1);
+  }
+  if (!/role=["']status["'][^>]+aria-live=["']polite["']/.test(source)) {
+    console.error(`Accessibility regression: ${journey} success feedback must be announced.`);
+    process.exit(1);
+  }
+}
+
 function walk(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const fullPath = path.join(directory, entry.name);

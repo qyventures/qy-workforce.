@@ -2,18 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'expo-router';
 import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { isLikelyNetworkError } from '../lib/errors';
+import { HOME_ACTIONS } from '../lib/home-actions.mjs';
 import { homeReadinessPresentation } from '../lib/home-readiness.mjs';
 import { supabase } from '../lib/supabase';
-
-const cards = [
-  { title: 'Find shifts', body: 'Browse eligible jobs matched to your verified roles and skills.', href: '/shifts' as const },
-  { title: 'My shifts', body: 'See accepted work, attendance status and submitted timesheets.', href: '/my-shifts' as const },
-  { title: 'Earnings', body: 'Track estimated earnings and timesheet payment status in one place.', href: '/earnings' as const },
-  { title: 'Clock in / out', body: 'Verify attendance at the assigned site using geofenced location.', href: '/attendance' as const },
-  { title: 'Updates', body: 'Open trusted shift, attendance and readiness reminders in one place.', href: '/notifications' as const },
-  { title: 'Readiness', body: 'See identity, eligibility, role, vetting, training and consent checks in one place.', href: '/readiness' as const },
-  { title: 'Profile & training', body: 'Complete onboarding, verification, certificates and required training.', href: '/onboarding' as const },
-];
 
 export default function HomeScreen() {
   const [readiness, setReadiness] = useState<Record<string, unknown> | null>(null);
@@ -94,7 +85,7 @@ export default function HomeScreen() {
           <Link href="/readiness" style={styles.link} accessibilityRole="link">View readiness →</Link>
         </View>
 
-        {cards.map((card) => (
+        {HOME_ACTIONS.map((card) => (
           <Link key={card.title} href={card.href} style={styles.card} accessibilityLabel={`${card.title}. ${card.body}`}>
             <View>
               <Text style={styles.cardTitle}>{card.title}</Text>

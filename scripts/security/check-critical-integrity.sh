@@ -4,6 +4,7 @@ set -euo pipefail
 TIMESHEET_MIGRATION="supabase/migrations/202608231147_timesheet_submission_integrity.sql"
 SUPERVISOR_MIGRATION="supabase/migrations/202608231245_supervisor_site_assignment_control.sql"
 SHIFT_DELETE_MIGRATION="supabase/migrations/202608232045_shift_deletion_integrity.sql"
+WORKER_DELETE_MIGRATION="supabase/migrations/202608232118_worker_account_hard_delete_guard.sql"
 
 # Worker timesheet submission must stay server-authoritative, monotonic and
 # derived only from trusted worker-app attendance.
@@ -51,4 +52,20 @@ if grep -q 'security definer' "$SHIFT_DELETE_MIGRATION"; then
 fi
 test -f supabase/tests/shift_deletion_integrity_checks.sql
 
-echo 'Critical timesheet, supervisor authorization and shift-history invariants present.'
+# Worker auth/profile deletion must not cascade away payroll, dispute, identity,
+# attendance or retention evidence. Erasure stays inside the privacy/retention flow.
+test -f "$WORKER_DELETE_MIGRATION"
+grep -q 'security definer' "$WORKER_DELETE_MIGRATION"
+grep -q 'set search_path = pg_catalog, public' "$WORKER_DELETE_MIGRATION"
+grep -q 'from public.worker_profiles' "$WORKER_DELETE_MIGRATION"
+grep -q 'before delete on public.profiles' "$WORKER_DELETE_MIGRATION"
+grep -q 'revoke delete on public.profiles from anon, authenticated' "$WORKER_DELETE_MIGRATION"
+grep -q 'revoke delete on public.worker_profiles from anon, authenticated' "$WORKER_DELETE_MIGRATION"
+grep -q 'revoke all on function public.prevent_worker_profile_hard_delete() from authenticated' "$WORKER_DELETE_MIGRATION"
+if grep -q 'allow_worker_hard_delete' "$WORKER_DELETE_MIGRATION"; then
+  echo 'worker hard-delete guard must not expose a session-setting bypass' >&2
+  exit 1
+fi
+test -f supabase/tests/worker_account_hard_delete_guard_checks.sql
+
+echo 'Critical timesheet, supervisor authorization, shift-history and worker lifecycle invariants present.'

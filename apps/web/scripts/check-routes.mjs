@@ -8,6 +8,7 @@ const requiredPages = [
   'app/employers/page.tsx',
   'app/workers/page.tsx',
   'app/industries/page.tsx',
+  'app/industries/[slug]/page.tsx',
   'app/how-it-works/page.tsx',
   'app/trust/page.tsx',
   'app/privacy/page.tsx',
@@ -26,6 +27,20 @@ const requiredPages = [
 const missingPages = requiredPages.filter((relativePath) => !fs.existsSync(path.join(root, relativePath)));
 if (missingPages.length) {
   console.error(`Required route regression: missing ${missingPages.join(', ')}`);
+  process.exit(1);
+}
+
+const industryData = fs.readFileSync(path.join(root, 'app/industries/industry-data.ts'), 'utf8');
+for (const slug of ['hospitality', 'food-beverage', 'cleaning', 'retail', 'promotions', 'events']) {
+  if (!industryData.includes(`id: '${slug}'`)) {
+    console.error(`Industry route regression: missing configured industry ${slug}`);
+    process.exit(1);
+  }
+}
+
+const industryPage = fs.readFileSync(path.join(root, 'app/industries/[slug]/page.tsx'), 'utf8');
+if (!industryPage.includes('generateStaticParams') || !industryPage.includes('notFound()')) {
+  console.error('Industry route regression: dynamic industry pages must define static params and reject unknown slugs.');
   process.exit(1);
 }
 
@@ -64,4 +79,4 @@ if (pagesWithNestedMain.length) {
   process.exit(1);
 }
 
-console.log('Required public routes, Ops routes, Ops navigation and landmark checks passed.');
+console.log('Required public routes, industry routes, Ops routes, Ops navigation and landmark checks passed.');

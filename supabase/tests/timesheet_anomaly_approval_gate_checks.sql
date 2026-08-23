@@ -21,16 +21,16 @@ begin
   if position('attendance_anomalies' in v_def)=0 then
     raise exception 'review_timesheet must inspect attendance anomalies';
   end if;
-  if position("aa.severity='high'" in v_def)=0 then
+  if position('aa.severity=''high''' in v_def)=0 then
     raise exception 'approval gate must be limited to high-severity anomalies';
   end if;
-  if position("aa.status='open'" in v_def)=0 then
+  if position('aa.status=''open''' in v_def)=0 then
     raise exception 'open high-severity anomalies must block approval';
   end if;
-  if position("aa.status='confirmed'" in v_def)=0 then
+  if position('aa.status=''confirmed''' in v_def)=0 then
     raise exception 'confirmed high-severity anomalies must block approval';
   end if;
-  if position("p_decision='approve'" in v_def)=0 then
+  if position('p_decision=''approve''' in v_def)=0 then
     raise exception 'anomaly gate must apply at approval boundary';
   end if;
   if position('rejection reason required' in v_def)=0 then

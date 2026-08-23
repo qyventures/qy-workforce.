@@ -55,6 +55,23 @@ if (homePage.includes('href={`/industries#${id}`}')) {
   process.exit(1);
 }
 
+const requiredPrimaryNavigation = [
+  'aria-label="Primary"',
+  'aria-label="QY Workforce home"',
+  'href="/industries"',
+  'href="/how-it-works"',
+  'href="/trust"',
+  'href="/workers"',
+  'href="/employers"',
+  'data-analytics-event="nav_worker_journey"',
+  'data-analytics-event="nav_employer_journey"',
+];
+const missingPrimaryNavigation = requiredPrimaryNavigation.filter((snippet) => !homePage.includes(snippet));
+if (missingPrimaryNavigation.length) {
+  console.error(`Public navigation regression: missing ${missingPrimaryNavigation.join(', ')}`);
+  process.exit(1);
+}
+
 const opsLayout = fs.readFileSync(path.join(root, 'app/ops/layout.tsx'), 'utf8');
 const requiredOpsLinks = [
   '/ops/shifts',
@@ -90,4 +107,4 @@ if (pagesWithNestedMain.length) {
   process.exit(1);
 }
 
-console.log('Required public routes, industry routes, homepage landing links, Ops routes, Ops navigation and landmark checks passed.');
+console.log('Required public routes, primary navigation, industry routes, homepage landing links, Ops routes, Ops navigation and landmark checks passed.');

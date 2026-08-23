@@ -1,3 +1,10 @@
+export function attendanceRouteMode(hasBackend, assignmentId) {
+  if (!hasBackend) return 'demo';
+  if (assignmentId === 'demo-assignment') return 'demo';
+  if (typeof assignmentId !== 'string' || assignmentId.trim() === '') return 'invalid';
+  return 'live';
+}
+
 export function attendanceState(details) {
   if (!details) return 'idle';
   if (details.clock_out_at) return 'clocked-out';

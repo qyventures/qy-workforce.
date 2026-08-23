@@ -74,11 +74,11 @@ export default function TimesheetQueue() {
   }
 
   return (
-    <main style={styles.page}>
+    <section style={styles.page} aria-labelledby="timesheets-title">
       <header style={styles.header}>
         <div>
           <div style={styles.eyebrow}>OPERATIONS / TIMESHEETS</div>
-          <h1 style={styles.h1}>Approval queue</h1>
+          <h1 id="timesheets-title" style={styles.h1}>Approval queue</h1>
           <p style={styles.sub}>Approve clean attendance, investigate exceptions, and prepare payroll-ready records.</p>
         </div>
         <div style={styles.headerActions}>
@@ -87,13 +87,13 @@ export default function TimesheetQueue() {
         </div>
       </header>
 
-      <section style={styles.summary}>
+      <section style={styles.summary} aria-label="Timesheet queue summary">
         <div><strong>{counts.pending}</strong><span> pending</span></div>
         <div><strong>{counts.clean}</strong><span> clean matches</span></div>
         <div><strong>{counts.review}</strong><span> need review</span></div>
       </section>
 
-      {message && <section style={styles.message}>{message}</section>}
+      {message && <section aria-live="polite" style={styles.message}>{message}</section>}
 
       <section style={styles.panel}>
         {loading ? <p style={styles.empty}>Loading authorised queue…</p> : rows.length === 0 ? (
@@ -101,7 +101,7 @@ export default function TimesheetQueue() {
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>
-              <thead><tr><th style={styles.th}>Worker</th><th style={styles.th}>Site</th><th style={styles.th}>Shift</th><th style={styles.th}>Payable</th><th style={styles.th}>Exception</th><th style={styles.th}>Action</th></tr></thead>
+              <thead><tr><th scope="col" style={styles.th}>Worker</th><th scope="col" style={styles.th}>Site</th><th scope="col" style={styles.th}>Shift</th><th scope="col" style={styles.th}>Payable</th><th scope="col" style={styles.th}>Exception</th><th scope="col" style={styles.th}>Action</th></tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.timesheet_id}>
@@ -127,7 +127,7 @@ export default function TimesheetQueue() {
       <section style={styles.note}>
         <strong>Security:</strong> the queue is generated server-side, worker identifiers are masked, supervisors only receive assigned-site records, approval/rejection is enforced again inside the review RPC, and every decision writes an audit event.
       </section>
-    </main>
+    </section>
   );
 }
 

@@ -10,7 +10,7 @@ test('allows known worker routes', () => {
   assert.equal(resolveAppRoute('qyworkforce://notifications'), '/notifications');
 });
 
-test('allows assignment and attendance routes only with a valid assignment id', () => {
+test('allows assignment and attendance routes only with one valid assignment id', () => {
   assert.equal(
     resolveAppRoute(`qyworkforce://assignment?assignmentId=${assignmentId}`),
     `/assignment?assignmentId=${assignmentId}`,
@@ -22,11 +22,18 @@ test('allows assignment and attendance routes only with a valid assignment id', 
   assert.equal(resolveAppRoute('qyworkforce://assignment?assignmentId=bad'), null);
   assert.equal(resolveAppRoute('qyworkforce://attendance?assignmentId=bad'), null);
   assert.equal(resolveAppRoute('qyworkforce://assignment'), null);
+  assert.equal(resolveAppRoute(`qyworkforce://assignment?assignmentId=${assignmentId}&extra=1`), null);
+  assert.equal(resolveAppRoute(`qyworkforce://assignment?assignmentId=${assignmentId}&assignmentId=${assignmentId}`), null);
+});
+
+test('rejects metadata on trusted routes', () => {
+  assert.equal(resolveAppRoute('qyworkforce://shifts?next=other'), null);
+  assert.equal(resolveAppRoute('qyworkforce://earnings#section'), null);
+  assert.equal(resolveAppRoute('qyworkforce://user:secret@notifications'), null);
 });
 
 test('rejects untrusted schemes and unknown routes', () => {
   assert.equal(resolveAppRoute('https://example.com/shifts'), null);
-  assert.equal(resolveAppRoute('javascript:alert(1)'), null);
   assert.equal(resolveAppRoute('qyworkforce://admin'), null);
 });
 

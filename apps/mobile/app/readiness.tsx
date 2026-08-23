@@ -41,7 +41,10 @@ const demo: Readiness = {
 };
 
 export default function ReadinessScreen() {
-  const [state, setState] = useState<Readiness>(demo);
+  // In a live build, do not render demo/pending readiness while the authoritative
+  // server state is loading or unavailable. A synthetic pending state can mislead a
+  // worker into thinking verified checks have actually failed.
+  const [state, setState] = useState<Readiness | null>(supabase ? null : demo);
   const [loading, setLoading] = useState(Boolean(supabase));
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +75,7 @@ export default function ReadinessScreen() {
       if (data?.[0]) {
         setState(data[0] as Readiness);
       } else {
+        setState(null);
         setError('Your readiness status is not available yet. Complete onboarding or try again shortly.');
       }
     } catch (loadError) {
@@ -92,7 +96,7 @@ export default function ReadinessScreen() {
     void load();
   }, [load]);
 
-  const { checks, readyCount, totalCount, statusLabel } = readinessSummary(state as unknown as Record<string, unknown>);
+  const summary = state ? readinessSummary(state as unknown as Record<string, unknown>) : null;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -108,13 +112,15 @@ export default function ReadinessScreen() {
         )}
       >
         <Text style={styles.eyebrow}>WORKER READINESS</Text>
-        <Text style={styles.title}>{state.deployable ? 'Ready for deployment' : 'Complete your readiness checks'}</Text>
+        <Text style={styles.title} accessibilityRole="header">
+          {state?.deployable ? 'Ready for deployment' : 'Complete your readiness checks'}
+        </Text>
         <Text style={styles.subtitle}>
           Your shift eligibility is calculated from verified server records. Sensitive identity details are not shown here.
         </Text>
 
         {loading ? (
-          <View style={styles.loadingRow} accessibilityLiveRegion="polite">
+          <View style={styles.loadingRow} accessibilityLiveRegion="polite" accessible accessibilityLabel="Checking worker readiness status">
             <ActivityIndicator color="#FFFFFF" />
             <Text style={styles.loadingText}>Checking readiness…</Text>
           </View>
@@ -126,6 +132,7 @@ export default function ReadinessScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Retry loading worker readiness status"
+              accessibilityHint="Requests your current readiness state from the server again"
               disabled={loading || refreshing}
               onPress={() => void load(true)}
               style={({ pressed }) => [styles.retryButton, pressed && styles.retryPressed]}
@@ -135,32 +142,45 @@ export default function ReadinessScreen() {
           </View>
         ) : null}
 
-        <View style={styles.card} accessible accessibilityLabel={`Worker status ${state.deployable ? 'deployable' : state.worker_status}. ${readyCount} of ${totalCount} readiness checks complete.`}>
-          <Text style={styles.cardTitle}>Current status</Text>
-          <Text style={styles.status}>{statusLabel}</Text>
-          <Text style={styles.meta}>{state.approved_roles} approved role(s) · {state.verified_skills} verified skill(s)</Text>
-          <Text style={styles.progress}>{readyCount} of {totalCount} readiness checks complete</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Readiness checklist</Text>
-          {checks.map(([label, ok]) => (
-            <View key={label} style={styles.row} accessible accessibilityLabel={`${label}: ${ok ? 'Ready' : 'Pending'}`}>
-              <Text style={styles.rowLabel}>{label}</Text>
-              <Text style={ok ? styles.pass : styles.pending}>{ok ? 'Ready' : 'Pending'}</Text>
+        {state && summary ? (
+          <>
+            <View
+              style={styles.card}
+              accessible
+              accessibilityLabel={`Worker status ${state.deployable ? 'deployable' : state.worker_status}. ${summary.readyCount} of ${summary.totalCount} readiness checks complete.`}
+            >
+              <Text style={styles.cardTitle}>Current status</Text>
+              <Text style={styles.status}>{summary.statusLabel}</Text>
+              <Text style={styles.meta}>{state.approved_roles} approved role(s) · {state.verified_skills} verified skill(s)</Text>
+              <Text style={styles.progress}>{summary.readyCount} of {summary.totalCount} readiness checks complete</Text>
             </View>
-          ))}
-        </View>
 
-        {state.deployable ? (
-          <Link href="/shifts" style={styles.primaryLink} accessibilityRole="link" accessibilityLabel="Find available shifts">
-            Find available shifts →
-          </Link>
-        ) : (
-          <Link href="/onboarding" style={styles.primaryLink} accessibilityRole="link" accessibilityLabel="Continue worker onboarding">
-            Continue onboarding →
-          </Link>
-        )}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Readiness checklist</Text>
+              {summary.checks.map(([label, ok]) => (
+                <View key={label} style={styles.row} accessible accessibilityLabel={`${label}: ${ok ? 'Ready' : 'Pending'}`}>
+                  <Text style={styles.rowLabel}>{label}</Text>
+                  <Text style={ok ? styles.pass : styles.pending}>{ok ? 'Ready' : 'Pending'}</Text>
+                </View>
+              ))}
+            </View>
+
+            {state.deployable ? (
+              <Link href="/shifts" style={styles.primaryLink} accessibilityRole="link" accessibilityLabel="Find available shifts">
+                Find available shifts →
+              </Link>
+            ) : (
+              <Link href="/onboarding" style={styles.primaryLink} accessibilityRole="link" accessibilityLabel="Continue worker onboarding">
+                Continue onboarding →
+              </Link>
+            )}
+          </>
+        ) : null}
+
+        {!loading && !state && !error ? (
+          <Text style={styles.unavailable} accessibilityLiveRegion="polite">Readiness information is not available in this build.</Text>
+        ) : null}
+
         <Link href="/my-shifts" style={styles.secondaryLink} accessibilityRole="link" accessibilityLabel="View my shifts">
           View my shifts
         </Link>
@@ -193,6 +213,7 @@ const styles = StyleSheet.create({
   retryButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: '#525252', backgroundColor: '#171717' },
   retryPressed: { opacity: 0.75 },
   retryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  unavailable: { color: '#A3A3A3', fontSize: 14, lineHeight: 20 },
   primaryLink: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', paddingVertical: 14, minHeight: 44 },
   secondaryLink: { color: '#D4D4D4', fontSize: 15, fontWeight: '600', paddingVertical: 14, minHeight: 44 },
 });

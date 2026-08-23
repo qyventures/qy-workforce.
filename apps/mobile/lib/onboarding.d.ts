@@ -1,6 +1,8 @@
 export const MAX_NAME_LENGTH: number;
 export const MAX_EMAIL_LENGTH: number;
 export const MAX_INTERESTS: number;
+export function normalizeDisplayName(value: unknown): string;
+export function isValidDisplayName(value: unknown): boolean;
 export function normalizeEmail(value: unknown): string;
 export function isValidOptionalEmail(value: unknown): boolean;
 export function canSubmitOnboarding(input: {

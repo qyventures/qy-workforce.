@@ -129,4 +129,12 @@ jobs:
             grep -q 'revoke all on function public.guard_accepted_shift_terms() from public' supabase/migrations/202608230721_shift_terms_integrity.sql
             test -f supabase/tests/shift_terms_integrity_checks.sql
           fi
+          if test -f supabase/migrations/202608230821_approved_timesheet_financial_integrity.sql; then
+            grep -q 'approved timesheet financial basis is immutable' supabase/migrations/202608230821_approved_timesheet_financial_integrity.sql
+            grep -q "old.status::text in ('approved','payroll_ready')" supabase/migrations/202608230821_approved_timesheet_financial_integrity.sql
+            grep -q 'payable_minutes' supabase/migrations/202608230821_approved_timesheet_financial_integrity.sql
+            grep -q 'worker_amount' supabase/migrations/202608230821_approved_timesheet_financial_integrity.sql
+            grep -q 'client_amount' supabase/migrations/202608230821_approved_timesheet_financial_integrity.sql
+            test -f supabase/tests/approved_timesheet_financial_integrity_checks.sql
+          fi
           echo 'Critical workforce security invariants present.'

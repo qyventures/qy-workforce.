@@ -3,9 +3,19 @@ import assert from 'node:assert/strict';
 import {
   MAX_INTERESTS,
   canSubmitOnboarding,
+  isValidDisplayName,
   isValidOptionalEmail,
+  normalizeDisplayName,
   normalizeEmail,
 } from './onboarding.mjs';
+
+test('normalizes display names safely', () => {
+  assert.equal(normalizeDisplayName('  Alex   Worker  '), 'Alex Worker');
+  assert.equal(normalizeDisplayName('Alex\nWorker\u0000'), 'AlexWorker');
+  assert.equal(normalizeDisplayName(null), '');
+  assert.equal(isValidDisplayName('Alex Worker'), true);
+  assert.equal(isValidDisplayName(' A '), false);
+});
 
 test('normalizes optional email safely', () => {
   assert.equal(normalizeEmail('  Worker@Example.COM '), 'worker@example.com');

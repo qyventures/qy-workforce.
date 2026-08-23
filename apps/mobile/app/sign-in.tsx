@@ -22,7 +22,9 @@ export default function SignInScreen() {
   }, [resendSeconds]);
 
   const normalizedPhone = useMemo(() => normalizePhone(phone), [phone]);
-  const canRequestOtp = !busy && resendSeconds === 0;
+  const normalizedToken = useMemo(() => normalizeOtp(token), [token]);
+  const canRequestOtp = !busy && resendSeconds === 0 && isValidPhone(normalizedPhone);
+  const canVerifyOtp = !busy && isValidOtp(normalizedToken);
 
   async function requestOtp() {
     if (!supabase) {
@@ -43,9 +45,10 @@ export default function SignInScreen() {
       const { error } = await supabase.auth.signInWithOtp({ phone: normalizedPhone });
       if (error) throw error;
       setPhone(normalizedPhone);
+      setToken('');
       setStage('otp');
       setResendSeconds(RESEND_COOLDOWN_SECONDS);
-      setMessage('If this number can receive verification messages, enter the code sent to your mobile.');
+      setMessage('If this number can receive verification messages, enter the latest code sent to your mobile.');
     } catch (error) {
       setMessage(
         isLikelyNetworkError(error)
@@ -59,7 +62,7 @@ export default function SignInScreen() {
 
   async function verifyOtp() {
     if (!supabase) return;
-    if (!isValidOtp(token)) {
+    if (!isValidOtp(normalizedToken)) {
       setMessage('Enter the verification code.');
       return;
     }
@@ -67,7 +70,7 @@ export default function SignInScreen() {
     setBusy(true);
     setMessage('');
     try {
-      const { error } = await supabase.auth.verifyOtp({ phone: normalizedPhone, token, type: 'sms' });
+      const { error } = await supabase.auth.verifyOtp({ phone: normalizedPhone, token: normalizedToken, type: 'sms' });
       if (error) throw error;
       setToken('');
       router.replace('/');
@@ -101,7 +104,10 @@ export default function SignInScreen() {
             <Text style={styles.label}>Mobile number</Text>
             <TextInput
               value={phone}
-              onChangeText={setPhone}
+              onChangeText={(value) => {
+                setMessage('');
+                setPhone(value);
+              }}
               keyboardType="phone-pad"
               autoComplete="tel"
               textContentType="telephoneNumber"
@@ -109,6 +115,7 @@ export default function SignInScreen() {
               placeholder="+65 8123 4567"
               placeholderTextColor="#737373"
               accessibilityLabel="Mobile number including country code"
+              accessibilityHint="Include your country code, for example plus 65 for Singapore"
               editable={!busy}
               returnKeyType="done"
               onSubmitEditing={requestOtp}
@@ -130,7 +137,10 @@ export default function SignInScreen() {
             <Text style={styles.label}>Verification code</Text>
             <TextInput
               value={token}
-              onChangeText={(value) => setToken(normalizeOtp(value))}
+              onChangeText={(value) => {
+                setMessage('');
+                setToken(normalizeOtp(value));
+              }}
               keyboardType="number-pad"
               autoComplete="sms-otp"
               textContentType="oneTimeCode"
@@ -140,16 +150,17 @@ export default function SignInScreen() {
               placeholder="Enter code"
               placeholderTextColor="#737373"
               accessibilityLabel="Verification code"
+              accessibilityHint="Enter the latest code sent to your mobile"
               editable={!busy}
               returnKeyType="done"
               onSubmitEditing={verifyOtp}
             />
             <TouchableOpacity
-              disabled={busy}
+              disabled={!canVerifyOtp}
               onPress={verifyOtp}
-              style={[styles.button, busy && styles.disabled]}
+              style={[styles.button, !canVerifyOtp && styles.disabled]}
               accessibilityRole="button"
-              accessibilityState={{ disabled: busy, busy }}
+              accessibilityState={{ disabled: !canVerifyOtp, busy }}
               accessibilityLabel="Verify code and sign in"
             >
               <Text style={styles.buttonText}>{busy ? 'Verifying…' : 'Verify and sign in'}</Text>
@@ -174,6 +185,7 @@ export default function SignInScreen() {
               style={styles.secondary}
               accessibilityRole="button"
               accessibilityState={{ disabled: busy }}
+              accessibilityLabel="Use a different mobile number"
             >
               <Text style={styles.secondaryText}>Use a different number</Text>
             </TouchableOpacity>

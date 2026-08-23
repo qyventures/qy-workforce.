@@ -5,5 +5,7 @@ export function attendanceRouteMode(hasBackend: boolean, assignmentId?: string):
 export function attendanceState(details: AttendanceLike): 'idle' | 'clocked-in' | 'clocked-out';
 export function nextClockAction(details: AttendanceLike): 'in' | 'out' | null;
 export function attendanceActionLabel(details: AttendanceLike): string;
+export function formatAttendanceSchedule(startsAt: unknown, endsAt: unknown): string;
+export function formatAttendanceTimestamp(value: unknown, fallback?: string): string;
 export function formatRecordedPay(timesheet: TimesheetLike): string;
 export function clockErrorMessage(message: unknown): string | null;

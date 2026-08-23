@@ -10,3 +10,5 @@ export function canOpenTrustedRoute(input: {
   sessionResolved: boolean;
   authenticated: boolean;
 }): boolean;
+
+export function shouldClearPendingTrustedRoute(authEvent: string): boolean;

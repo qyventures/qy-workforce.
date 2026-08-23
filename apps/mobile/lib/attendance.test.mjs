@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { attendanceActionLabel, attendanceState, clockErrorMessage, formatRecordedPay, nextClockAction } from './attendance.mjs';
+import { attendanceActionLabel, attendanceRouteMode, attendanceState, clockErrorMessage, formatRecordedPay, nextClockAction } from './attendance.mjs';
+
+test('attendance route fails closed when backend is configured and assignment is missing', () => {
+  assert.equal(attendanceRouteMode(false, undefined), 'demo');
+  assert.equal(attendanceRouteMode(true, 'demo-assignment'), 'demo');
+  assert.equal(attendanceRouteMode(true, undefined), 'invalid');
+  assert.equal(attendanceRouteMode(true, ''), 'invalid');
+  assert.equal(attendanceRouteMode(true, '  '), 'invalid');
+  assert.equal(attendanceRouteMode(true, 'a-real-assignment-id'), 'live');
+});
 
 test('attendance state follows server timestamps', () => {
   assert.equal(attendanceState(null), 'idle');

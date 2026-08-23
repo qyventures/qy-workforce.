@@ -9,6 +9,8 @@ const employerLayout = read('app/employers/layout.tsx');
 const workerLayout = read('app/workers/layout.tsx');
 const howItWorksLayout = read('app/how-it-works/layout.tsx');
 const industriesLayout = read('app/industries/layout.tsx');
+const industryPage = read('app/industries/[slug]/page.tsx');
+const industryData = read('app/industries/industry-data.ts');
 const trustLayout = read('app/trust/layout.tsx');
 const privacyPage = read('app/privacy/page.tsx');
 const termsPage = read('app/terms/page.tsx');
@@ -41,11 +43,24 @@ for (const [name, source] of [
   }
 }
 
+if (!industryPage.includes('generateMetadata') || !industryPage.includes('alternates: { canonical }') || !industryPage.includes('openGraph:')) {
+  failures.push('Dynamic industry routes must retain generated canonical and Open Graph metadata.');
+}
+if (!industryPage.includes('generateStaticParams')) {
+  failures.push('Dynamic industry routes must remain statically enumerable for crawlability.');
+}
+for (const slug of ['hospitality', 'food-beverage', 'cleaning', 'retail', 'promotions', 'events']) {
+  if (!industryData.includes(`id: '${slug}'`)) failures.push(`Industry SEO regression: missing ${slug}.`);
+}
+
 const requiredPublicPaths = ['/', '/employers', '/workers', '/how-it-works', '/industries', '/trust', '/privacy', '/terms'];
 for (const publicPath of requiredPublicPaths) {
   if (!sitemap.includes(`'${publicPath}'`)) {
     failures.push(`Sitemap regression: missing ${publicPath}.`);
   }
+}
+if (!sitemap.includes("industries.map((industry) => `/industries/${industry.id}`)")) {
+  failures.push('Sitemap must include all configured industry landing pages.');
 }
 if (sitemap.includes("'/ops") || sitemap.includes("'/api")) {
   failures.push('Sitemap must not expose Ops or API routes.');
@@ -65,4 +80,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('SEO metadata, sitemap and robots regression checks passed.');
+console.log('SEO metadata, industry landing pages, sitemap and robots regression checks passed.');

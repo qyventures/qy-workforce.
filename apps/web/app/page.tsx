@@ -10,6 +10,19 @@ const industries = [
 export default function HomePage() {
   return (
     <main style={{fontFamily:'Arial, sans-serif', background:'#0a0a0a', color:'#fff', minHeight:'100vh'}}>
+      <header style={{position:'sticky',top:0,zIndex:20,background:'rgba(10,10,10,.94)',backdropFilter:'blur(12px)',borderBottom:'1px solid #202020'}}>
+        <nav aria-label="Primary" style={{maxWidth:1180,margin:'0 auto',padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:18,flexWrap:'wrap'}}>
+          <a href="/" aria-label="QY Workforce home" style={{color:'#fff',textDecoration:'none',fontWeight:800,letterSpacing:1}}>QY WORKFORCE</a>
+          <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+            <a href="/industries" style={{color:'#bbb',textDecoration:'none',fontSize:14}}>Industries</a>
+            <a href="/how-it-works" style={{color:'#bbb',textDecoration:'none',fontSize:14}}>How it works</a>
+            <a href="/trust" style={{color:'#bbb',textDecoration:'none',fontSize:14}}>Trust</a>
+            <a href="/workers" data-analytics-event="nav_worker_journey" style={{color:'#fff',textDecoration:'none',fontSize:14,fontWeight:700}}>Find shifts</a>
+            <a href="/employers" data-analytics-event="nav_employer_journey" style={{background:'#fff',color:'#000',padding:'10px 14px',borderRadius:9,textDecoration:'none',fontSize:14,fontWeight:800}}>Hire workers</a>
+          </div>
+        </nav>
+      </header>
+
       <section style={{maxWidth:1180, margin:'0 auto', padding:'96px 24px 64px'}}>
         <p style={{letterSpacing:3, color:'#aaa', fontSize:12}}>QY WORKFORCE</p>
         <h1 style={{fontSize:'clamp(42px,7vw,82px)', lineHeight:0.98, margin:'18px 0 24px', maxWidth:900}}>Flexible manpower. Verified workers. Better operations.</h1>

@@ -5,6 +5,7 @@ TIMESHEET_MIGRATION="supabase/migrations/202608231147_timesheet_submission_integ
 SUPERVISOR_MIGRATION="supabase/migrations/202608231245_supervisor_site_assignment_control.sql"
 SHIFT_DELETE_MIGRATION="supabase/migrations/202608232045_shift_deletion_integrity.sql"
 WORKER_DELETE_MIGRATION="supabase/migrations/202608232118_worker_account_hard_delete_guard.sql"
+PAYROLL_EXPORT_MIGRATION="supabase/migrations/202608232245_payroll_legacy_export_rpc_retirement.sql"
 
 # Worker timesheet submission must stay server-authoritative, monotonic and
 # derived only from trusted worker-app attendance.
@@ -68,4 +69,13 @@ if grep -q 'allow_worker_hard_delete' "$WORKER_DELETE_MIGRATION"; then
 fi
 test -f supabase/tests/worker_account_hard_delete_guard_checks.sql
 
-echo 'Critical timesheet, supervisor authorization, shift-history and worker lifecycle invariants present.'
+# Payroll export must require immutable export evidence. The legacy one-argument
+# transition is retained only for migration compatibility and must not be callable.
+test -f "$PAYROLL_EXPORT_MIGRATION"
+grep -q 'revoke all on function public.mark_payroll_batch_exported(uuid) from public' "$PAYROLL_EXPORT_MIGRATION"
+grep -q 'revoke all on function public.mark_payroll_batch_exported(uuid) from anon' "$PAYROLL_EXPORT_MIGRATION"
+grep -q 'revoke all on function public.mark_payroll_batch_exported(uuid) from authenticated' "$PAYROLL_EXPORT_MIGRATION"
+grep -q 'grant execute on function public.record_payroll_export(uuid,text,text,integer) to authenticated' "$PAYROLL_EXPORT_MIGRATION"
+test -f supabase/tests/payroll_legacy_export_rpc_retirement_checks.sql
+
+echo 'Critical timesheet, supervisor authorization, shift-history, worker lifecycle and payroll export invariants present.'

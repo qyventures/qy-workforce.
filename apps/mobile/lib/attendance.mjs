@@ -24,6 +24,24 @@ export function attendanceActionLabel(details) {
   return action === 'out' ? 'Verify location & clock out' : 'Verify location & clock in';
 }
 
+function validDate(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+export function formatAttendanceSchedule(startsAt, endsAt) {
+  const start = validDate(startsAt);
+  const end = validDate(endsAt);
+  if (!start || !end || end.getTime() <= start.getTime()) return 'Schedule unavailable';
+  return `${start.toLocaleDateString([], { day: 'numeric', month: 'short' })} · ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+export function formatAttendanceTimestamp(value, fallback = 'Time unavailable') {
+  const date = validDate(value);
+  return date ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : fallback;
+}
+
 export function formatRecordedPay(timesheet) {
   if (!timesheet) return 'A draft timesheet is being prepared.';
   const rawMinutes = Number(timesheet.payable_minutes);

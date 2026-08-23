@@ -1,5 +1,5 @@
 import { Link } from 'expo-router';
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const updates = [
   {
@@ -37,12 +37,17 @@ export default function NotificationsScreen() {
         </View>
 
         {updates.map((item) => (
-          <Link key={item.title} href={item.href} style={styles.card} accessibilityLabel={`${item.title}. ${item.body}`}>
-            <View>
+          <Link key={item.title} href={item.href} asChild>
+            <Pressable
+              style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.title}. ${item.body}`}
+              accessibilityHint="Opens the related worker screen"
+            >
               <Text style={styles.cardTitle}>{item.title}</Text>
               <Text style={styles.cardBody}>{item.body}</Text>
               <Text style={styles.cardLink}>Open →</Text>
-            </View>
+            </Pressable>
           </Link>
         ))}
 
@@ -63,7 +68,8 @@ const styles = StyleSheet.create({
   info: { backgroundColor: '#171717', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: '#2A2A2A' },
   infoTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', marginBottom: 6 },
   infoBody: { color: '#B3B3B3', fontSize: 14, lineHeight: 21 },
-  card: { backgroundColor: '#111111', borderWidth: 1, borderColor: '#262626', borderRadius: 18, padding: 20 },
+  card: { backgroundColor: '#111111', borderWidth: 1, borderColor: '#262626', borderRadius: 18, padding: 20, minHeight: 120 },
+  cardPressed: { opacity: 0.72 },
   cardTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '600' },
   cardBody: { color: '#B3B3B3', fontSize: 15, lineHeight: 22, marginTop: 8 },
   cardLink: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', marginTop: 12 },

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
-import { attendanceState, clockErrorMessage, formatRecordedPay } from '../lib/attendance.mjs';
+import { attendanceRouteMode, attendanceState, clockErrorMessage, formatRecordedPay } from '../lib/attendance.mjs';
 import { isLikelyNetworkError, mobileErrorMessage } from '../lib/errors';
 import { supabase } from '../lib/supabase';
 
@@ -46,14 +46,23 @@ export default function AttendanceScreen() {
   async function load(asRefresh = false) {
     if (asRefresh) setRefreshingState(true); else setLoading(true);
     setLoadError(null);
-    if (!supabase || !assignmentId || assignmentId === 'demo-assignment') {
+
+    const routeMode = attendanceRouteMode(Boolean(supabase), assignmentId);
+    if (routeMode === 'demo') {
       setDetails(demo); setState('idle'); setLoading(false); setRefreshingState(false); return;
     }
+    if (routeMode === 'invalid') {
+      setDetails(null);
+      setState('idle');
+      setLoadError('This attendance link is incomplete. Open attendance from My Shifts or a trusted QY Workforce notification.');
+      setLoading(false); setRefreshingState(false); return;
+    }
+
     try {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
+      const { data: authData, error: authError } = await supabase!.auth.getUser();
       if (authError) throw authError;
       if (!authData.user) { setLoading(false); setRefreshingState(false); router.replace('/sign-in'); return; }
-      const { data, error } = await supabase.rpc('get_assignment_attendance_state', { p_assignment_id: assignmentId });
+      const { data, error } = await supabase!.rpc('get_assignment_attendance_state', { p_assignment_id: assignmentId });
       if (error) throw error;
       if (!data) throw new Error('This assignment is not available.');
       const next = data as AttendanceDetails;

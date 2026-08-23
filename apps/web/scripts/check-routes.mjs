@@ -30,8 +30,9 @@ if (missingPages.length) {
   process.exit(1);
 }
 
+const industrySlugs = ['hospitality', 'food-beverage', 'cleaning', 'retail', 'promotions', 'events'];
 const industryData = fs.readFileSync(path.join(root, 'app/industries/industry-data.ts'), 'utf8');
-for (const slug of ['hospitality', 'food-beverage', 'cleaning', 'retail', 'promotions', 'events']) {
+for (const slug of industrySlugs) {
   if (!industryData.includes(`id: '${slug}'`)) {
     console.error(`Industry route regression: missing configured industry ${slug}`);
     process.exit(1);
@@ -41,6 +42,18 @@ for (const slug of ['hospitality', 'food-beverage', 'cleaning', 'retail', 'promo
 const industryPage = fs.readFileSync(path.join(root, 'app/industries/[slug]/page.tsx'), 'utf8');
 if (!industryPage.includes('generateStaticParams') || !industryPage.includes('notFound()')) {
   console.error('Industry route regression: dynamic industry pages must define static params and reject unknown slugs.');
+  process.exit(1);
+}
+
+const homePage = fs.readFileSync(path.join(root, 'app/page.tsx'), 'utf8');
+for (const slug of industrySlugs) {
+  if (!homePage.includes(`href={\`/industries/${'${id}'}\`}`) && !homePage.includes(`/industries/${slug}`)) {
+    console.error(`Homepage industry route regression: missing landing-page link coverage for ${slug}`);
+    process.exit(1);
+  }
+}
+if (homePage.includes('href={`/industries#${id}`}')) {
+  console.error('Homepage industry route regression: legacy anchor links must not replace dedicated industry landing pages.');
   process.exit(1);
 }
 
@@ -79,4 +92,4 @@ if (pagesWithNestedMain.length) {
   process.exit(1);
 }
 
-console.log('Required public routes, industry routes, Ops routes, Ops navigation and landmark checks passed.');
+console.log('Required public routes, industry routes, homepage landing links, Ops routes, Ops navigation and landmark checks passed.');

@@ -55,3 +55,13 @@ export function shiftAccessibilityLabel(shift) {
     .filter(Boolean)
     .join('. ');
 }
+
+export function shiftAcceptanceSummary(shift) {
+  const location = [shift.client, shift.site].filter(Boolean).join(' · ');
+  return [
+    shift.role,
+    location,
+    formatShiftTime(shift.startsAt, shift.endsAt),
+    `S$${shift.rate.toFixed(2)}/hr`,
+  ].filter(Boolean).join('\n');
+}

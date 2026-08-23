@@ -1,0 +1,27 @@
+name: Critical workforce integrity
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - 'scripts/security/check-critical-integrity.sh'
+      - '.github/workflows/critical-integrity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: critical-integrity-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  critical-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Assert critical workforce integrity boundaries
+        shell: bash
+        run: bash scripts/security/check-critical-integrity.sh

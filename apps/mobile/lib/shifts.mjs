@@ -25,10 +25,16 @@ export function normalizeAvailableShift(row) {
   const id = typeof row.shift_id === 'string' ? row.shift_id : '';
   const startsAt = typeof row.starts_at === 'string' ? row.starts_at : '';
   const endsAt = typeof row.ends_at === 'string' ? row.ends_at : '';
-  if (!id || !Number.isFinite(Date.parse(startsAt)) || !Number.isFinite(Date.parse(endsAt))) return null;
+  const startMs = Date.parse(startsAt);
+  const endMs = Date.parse(endsAt);
+  const slots = Number(row.available_slots ?? 0);
+
+  // The backend remains authoritative for eligibility and availability. These checks only
+  // prevent malformed or already-unavailable rows from becoming actionable mobile cards.
+  if (!id || !Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) return null;
+  if (!Number.isFinite(slots) || slots < 1) return null;
 
   const rate = Number(row.worker_rate ?? 0);
-  const slots = Number(row.available_slots ?? 0);
   return {
     id,
     role: typeof row.role_name === 'string' && row.role_name.trim() ? row.role_name : 'Shift',
@@ -38,7 +44,7 @@ export function normalizeAvailableShift(row) {
     endsAt,
     rate: Number.isFinite(rate) && rate >= 0 ? rate : 0,
     requirements: parseRequirements(row.requirements),
-    availableSlots: Number.isFinite(slots) && slots > 0 ? Math.floor(slots) : 0,
+    availableSlots: Math.floor(slots),
   };
 }
 

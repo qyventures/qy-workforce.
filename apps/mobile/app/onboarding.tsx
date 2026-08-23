@@ -18,6 +18,7 @@ import {
   MAX_NAME_LENGTH,
   canSubmitOnboarding,
   isValidOptionalEmail,
+  normalizeDisplayName,
   normalizeEmail,
 } from '../lib/onboarding.mjs';
 
@@ -40,7 +41,7 @@ export default function OnboardingScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState('');
 
-  const trimmedName = fullName.trim();
+  const normalizedName = normalizeDisplayName(fullName);
   const emailValid = isValidOptionalEmail(email);
   const canContinue = useMemo(
     () => canSubmitOnboarding({
@@ -89,7 +90,7 @@ export default function OnboardingScreen() {
       // A security-definer RPC controls exactly which worker fields can be created or changed.
       // The app never receives direct write access to verification, eligibility or deployability status.
       const { error: onboardingError } = await supabase.rpc('complete_worker_onboarding', {
-        p_display_name: trimmedName,
+        p_display_name: normalizedName,
         p_role_codes: selected,
         p_policy_version: POLICY_VERSION,
       });
@@ -141,12 +142,14 @@ export default function OnboardingScreen() {
             setStatus('');
             setFullName(value.slice(0, MAX_NAME_LENGTH));
           }}
+          onEndEditing={() => setFullName(normalizeDisplayName(fullName))}
           placeholder="Full name"
           placeholderTextColor="#777"
           autoComplete="name"
           textContentType="name"
           maxLength={MAX_NAME_LENGTH}
           accessibilityLabel="Full name"
+          accessibilityHint="Enter your name as it should appear on your worker profile"
           style={styles.input}
         />
         <TextInput

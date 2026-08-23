@@ -22,6 +22,9 @@ const failures = [];
 if (!rootLayout.includes('metadataBase:') || !rootLayout.includes('https://workforce.qyvent.com')) {
   failures.push('Root metadata must define metadataBase with the HTTPS workforce.qyvent.com fallback.');
 }
+if (!rootLayout.includes("alternates: { canonical: '/' }") || !rootLayout.includes("url: '/'")) {
+  failures.push('Homepage metadata must retain canonical and Open Graph URLs.');
+}
 if (!rootLayout.includes('openGraph:') || !rootLayout.includes("robots: { index: true, follow: true }")) {
   failures.push('Root metadata must retain Open Graph metadata and public indexing directives.');
 }

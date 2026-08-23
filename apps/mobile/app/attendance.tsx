@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
-import { attendanceRouteMode, attendanceState, clockErrorMessage, formatRecordedPay } from '../lib/attendance.mjs';
+import { attendanceRouteMode, attendanceState, clockErrorMessage, formatAttendanceSchedule, formatAttendanceTimestamp, formatRecordedPay } from '../lib/attendance.mjs';
 import { isLikelyNetworkError, mobileErrorMessage } from '../lib/errors';
 import { supabase } from '../lib/supabase';
 
@@ -145,15 +145,14 @@ export default function AttendanceScreen() {
   }
 
   const isWorking = state === 'clocked-in';
-  const start = new Date(details.starts_at); const end = new Date(details.ends_at);
-  const shiftDate = `${start.toLocaleDateString([], { day: 'numeric', month: 'short' })} · ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  const shiftDate = formatAttendanceSchedule(details.starts_at, details.ends_at);
 
   return <View style={styles.page}>
     <Text style={styles.eyebrow}>SHIFT ATTENDANCE</Text>
     <Text style={styles.title}>{details.role_name}</Text>
     <Text style={styles.client}>{details.site_name}{details.site_address ? ` · ${details.site_address}` : ''}</Text>
     {loadError && <View style={styles.warningCard} accessibilityRole="alert"><Text style={styles.warningTitle}>Check server status before retrying</Text><Text style={styles.warningBody}>{loadError}</Text><Pressable accessibilityRole="button" accessibilityState={{ disabled: refreshingState }} style={[styles.warningButton, refreshingState && styles.disabledButton]} disabled={refreshingState} onPress={() => void load(true)}><Text style={styles.warningButtonText}>{refreshingState ? 'Refreshing status…' : 'Refresh attendance status'}</Text></Pressable></View>}
-    <View style={styles.timeCard}><Text style={styles.date}>{shiftDate}</Text><Text style={styles.status}>{isWorking ? 'You are clocked in' : state === 'clocked-out' ? 'Shift completed' : 'Ready to clock in'}</Text>{details.clock_in_at && <Text style={styles.distance}>Clocked in: {new Date(details.clock_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>}{details.clock_out_at && <Text style={styles.distance}>Clocked out: {new Date(details.clock_out_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>}{distanceM !== null && <Text style={styles.distance}>Last verified worksite distance: {distanceM}m</Text>}</View>
+    <View style={styles.timeCard}><Text style={styles.date}>{shiftDate}</Text><Text style={styles.status}>{isWorking ? 'You are clocked in' : state === 'clocked-out' ? 'Shift completed' : 'Ready to clock in'}</Text>{details.clock_in_at && <Text style={styles.distance}>Clocked in: {formatAttendanceTimestamp(details.clock_in_at)}</Text>}{details.clock_out_at && <Text style={styles.distance}>Clocked out: {formatAttendanceTimestamp(details.clock_out_at)}</Text>}{distanceM !== null && <Text style={styles.distance}>Last verified worksite distance: {distanceM}m</Text>}</View>
     <View style={styles.privacyCard}><Text style={styles.privacyTitle}>Location privacy</Text><Text style={styles.privacyBody}>Location is requested only when you tap clock in or clock out. QY Workforce does not continuously track your location in the background.</Text></View>
     {state !== 'clocked-out' && <Pressable accessibilityRole="button" accessibilityLabel={isWorking ? 'Verify location and clock out' : 'Verify location and clock in'} accessibilityState={{ disabled: state === 'locating' || refreshingState || Boolean(loadError) }} disabled={state === 'locating' || refreshingState || Boolean(loadError)} style={[styles.primaryButton, isWorking && styles.outButton, (state === 'locating' || refreshingState || Boolean(loadError)) && styles.disabledButton]} onPress={() => verifyAndRecord(isWorking ? 'out' : 'in')}><Text style={styles.primaryButtonText}>{state === 'locating' ? 'Verifying location…' : isWorking ? 'Verify location & clock out' : 'Verify location & clock in'}</Text></Pressable>}
     {state === 'clocked-out' && <View style={styles.completeCard}><Text style={styles.completeTitle}>Attendance captured</Text><Text style={styles.completeBody}>{formatRecordedPay(details.timesheet)}</Text><Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={() => router.replace('/my-shifts')}><Text style={styles.secondaryButtonText}>View My Shifts</Text></Pressable></View>}

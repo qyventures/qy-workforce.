@@ -9,8 +9,19 @@ test('parseRequirements supports arrays and boolean maps', () => {
 
 test('normalizeAvailableShift rejects rows without trusted identifiers or schedules', () => {
   assert.equal(normalizeAvailableShift(null), null);
-  assert.equal(normalizeAvailableShift({ shift_id: '', starts_at: '2026-08-23', ends_at: '2026-08-23' }), null);
-  assert.equal(normalizeAvailableShift({ shift_id: 'shift-1', starts_at: 'bad', ends_at: '2026-08-23' }), null);
+  assert.equal(normalizeAvailableShift({ shift_id: '', starts_at: '2026-08-23', ends_at: '2026-08-23', available_slots: 1 }), null);
+  assert.equal(normalizeAvailableShift({ shift_id: 'shift-1', starts_at: 'bad', ends_at: '2026-08-23', available_slots: 1 }), null);
+  assert.equal(normalizeAvailableShift({ shift_id: 'shift-1', starts_at: '2026-08-23T14:00:00+08:00', ends_at: '2026-08-23T10:00:00+08:00', available_slots: 1 }), null);
+});
+
+test('normalizeAvailableShift rejects rows with no remaining capacity', () => {
+  const base = {
+    shift_id: 'shift-1', role_name: 'Banquet Crew',
+    starts_at: '2026-08-23T10:00:00+08:00', ends_at: '2026-08-23T14:00:00+08:00',
+  };
+  assert.equal(normalizeAvailableShift({ ...base, available_slots: 0 }), null);
+  assert.equal(normalizeAvailableShift({ ...base, available_slots: -1 }), null);
+  assert.equal(normalizeAvailableShift({ ...base, available_slots: 'not-a-number' }), null);
 });
 
 test('normalizeAvailableShift sanitizes presentation fields without deciding eligibility', () => {

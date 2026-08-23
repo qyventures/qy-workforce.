@@ -20,15 +20,22 @@ export function resolveAppRoute(rawUrl) {
   }
 
   if (url.protocol !== 'qyworkforce:') return null;
+  if (url.username || url.password || url.hash) return null;
 
   const host = url.hostname ? `/${url.hostname}` : '';
   const pathname = `${host}${url.pathname}`.replace(/\/{2,}/g, '/').replace(/\/$/, '') || '/';
 
-  if (ALLOWED_PATHS.has(pathname)) return pathname;
+  if (ALLOWED_PATHS.has(pathname)) {
+    return url.searchParams.size === 0 ? pathname : null;
+  }
 
   if (pathname === '/assignment' || pathname === '/attendance') {
-    const assignmentId = url.searchParams.get('assignmentId');
-    if (!assignmentId || !ID_PATTERN.test(assignmentId)) return null;
+    const keys = [...url.searchParams.keys()];
+    const assignmentIds = url.searchParams.getAll('assignmentId');
+    if (keys.length !== 1 || keys[0] !== 'assignmentId' || assignmentIds.length !== 1) return null;
+
+    const assignmentId = assignmentIds[0];
+    if (!ID_PATTERN.test(assignmentId)) return null;
     return `${pathname}?assignmentId=${encodeURIComponent(assignmentId)}`;
   }
 

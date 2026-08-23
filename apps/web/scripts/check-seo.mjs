@@ -7,6 +7,8 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 const rootLayout = read('app/layout.tsx');
 const employerLayout = read('app/employers/layout.tsx');
 const workerLayout = read('app/workers/layout.tsx');
+const privacyPage = read('app/privacy/page.tsx');
+const termsPage = read('app/terms/page.tsx');
 const sitemap = read('app/sitemap.ts');
 const robots = read('app/robots.ts');
 
@@ -19,12 +21,12 @@ if (!rootLayout.includes('openGraph:') || !rootLayout.includes("robots: { index:
   failures.push('Root metadata must retain Open Graph metadata and public indexing directives.');
 }
 
-for (const [name, source] of [['employers', employerLayout], ['workers', workerLayout]]) {
+for (const [name, source] of [['employers', employerLayout], ['workers', workerLayout], ['privacy', privacyPage], ['terms', termsPage]]) {
   if (!source.includes('alternates:') || !source.includes('canonical:')) {
-    failures.push(`${name} conversion route must retain canonical metadata.`);
+    failures.push(`${name} public route must retain canonical metadata.`);
   }
   if (!source.includes('openGraph:')) {
-    failures.push(`${name} conversion route must retain Open Graph metadata.`);
+    failures.push(`${name} public route must retain Open Graph metadata.`);
   }
 }
 

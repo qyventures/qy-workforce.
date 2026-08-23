@@ -6,3 +6,9 @@ export function resolveAuthRedirect({ configured, sessionResolved, authenticated
   if (authenticated && onSignIn) return '/';
   return null;
 }
+
+export function canOpenTrustedRoute({ configured, sessionResolved, authenticated }) {
+  if (!sessionResolved) return false;
+  if (!configured) return true;
+  return authenticated;
+}

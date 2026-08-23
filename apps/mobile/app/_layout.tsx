@@ -3,7 +3,7 @@ import { ActivityIndicator, AppState, StyleSheet, Text, View, type AppStateStatu
 import * as Linking from 'expo-linking';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { canOpenTrustedRoute, resolveAuthRedirect } from '../lib/auth-routing.mjs';
+import { canOpenTrustedRoute, resolveAuthRedirect, shouldClearPendingTrustedRoute } from '../lib/auth-routing.mjs';
 import { supabase } from '../lib/supabase';
 import { resolveAppRoute } from '../lib/navigation.mjs';
 
@@ -29,10 +29,11 @@ export default function RootLayout() {
       setSessionResolved(true);
     });
 
-    const { data: authSubscription } = client.auth.onAuthStateChange((_event, session) => {
+    const { data: authSubscription } = client.auth.onAuthStateChange((event, session) => {
       if (!active) return;
       setAuthenticated(Boolean(session));
       setSessionResolved(true);
+      if (shouldClearPendingTrustedRoute(event)) setPendingTrustedRoute(null);
     });
 
     return () => {

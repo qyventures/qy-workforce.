@@ -3,7 +3,7 @@ import { ActivityIndicator, AppState, StyleSheet, Text, View, type AppStateStatu
 import * as Linking from 'expo-linking';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { resolveAuthRedirect } from '../lib/auth-routing.mjs';
+import { canOpenTrustedRoute, resolveAuthRedirect } from '../lib/auth-routing.mjs';
 import { supabase } from '../lib/supabase';
 import { resolveAppRoute } from '../lib/navigation.mjs';
 
@@ -12,6 +12,7 @@ export default function RootLayout() {
   const segments = useSegments();
   const [sessionResolved, setSessionResolved] = useState(!supabase);
   const [authenticated, setAuthenticated] = useState(false);
+  const [pendingTrustedRoute, setPendingTrustedRoute] = useState<string | null>(null);
 
   useEffect(() => {
     const client = supabase;
@@ -71,20 +72,28 @@ export default function RootLayout() {
   useEffect(() => {
     let active = true;
 
-    const openTrustedRoute = (url: string | null) => {
+    const rememberTrustedRoute = (url: string | null) => {
       if (!active || !url) return;
       const route = resolveAppRoute(url);
-      if (route) router.replace(route as never);
+      if (route) setPendingTrustedRoute(route);
     };
 
-    void Linking.getInitialURL().then(openTrustedRoute).catch(() => undefined);
-    const subscription = Linking.addEventListener('url', ({ url }) => openTrustedRoute(url));
+    void Linking.getInitialURL().then(rememberTrustedRoute).catch(() => undefined);
+    const subscription = Linking.addEventListener('url', ({ url }) => rememberTrustedRoute(url));
 
     return () => {
       active = false;
       subscription.remove();
     };
-  }, [router]);
+  }, []);
+
+  useEffect(() => {
+    if (!pendingTrustedRoute) return;
+    if (!canOpenTrustedRoute({ configured: Boolean(supabase), sessionResolved, authenticated })) return;
+
+    router.replace(pendingTrustedRoute as never);
+    setPendingTrustedRoute(null);
+  }, [authenticated, pendingTrustedRoute, router, sessionResolved]);
 
   if (supabase && !sessionResolved) {
     return (

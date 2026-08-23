@@ -49,6 +49,12 @@ if (!industryPage.includes('generateMetadata') || !industryPage.includes('altern
 if (!industryPage.includes('generateStaticParams')) {
   failures.push('Dynamic industry routes must remain statically enumerable for crawlability.');
 }
+if (!industryPage.includes("'@type': 'Service'") || !industryPage.includes('application/ld+json') || !industryPage.includes("name: 'Singapore'")) {
+  failures.push('Dynamic industry routes must retain Service JSON-LD with Singapore areaServed.');
+}
+if (!industryPage.includes("replace(/</g, '\\\\u003c')")) {
+  failures.push('Industry JSON-LD must keep less-than escaping before injection.');
+}
 for (const slug of ['hospitality', 'food-beverage', 'cleaning', 'retail', 'promotions', 'events']) {
   if (!industryData.includes(`id: '${slug}'`)) failures.push(`Industry SEO regression: missing ${slug}.`);
 }
@@ -80,4 +86,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('SEO metadata, industry landing pages, sitemap and robots regression checks passed.');
+console.log('SEO metadata, structured data, industry landing pages, sitemap and robots regression checks passed.');

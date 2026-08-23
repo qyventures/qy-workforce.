@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { attendanceActionLabel, attendanceRouteMode, attendanceState, clockErrorMessage, formatRecordedPay, nextClockAction } from './attendance.mjs';
+import { attendanceActionLabel, attendanceRouteMode, attendanceState, clockErrorMessage, formatAttendanceSchedule, formatAttendanceTimestamp, formatRecordedPay, nextClockAction } from './attendance.mjs';
 
 test('attendance route fails closed when backend is configured and assignment is missing', () => {
   assert.equal(attendanceRouteMode(false, undefined), 'demo');
@@ -23,6 +23,20 @@ test('next action never allows another event after clock out', () => {
   assert.equal(nextClockAction({ clock_in_at: 'x', clock_out_at: null }), 'out');
   assert.equal(nextClockAction({ clock_in_at: 'x', clock_out_at: 'y' }), null);
   assert.equal(attendanceActionLabel({ clock_in_at: 'x', clock_out_at: 'y' }), 'Shift completed');
+});
+
+test('attendance schedule fails safely on malformed or reversed timestamps', () => {
+  assert.equal(formatAttendanceSchedule('', '2026-08-23T09:00:00Z'), 'Schedule unavailable');
+  assert.equal(formatAttendanceSchedule('not-a-date', '2026-08-23T09:00:00Z'), 'Schedule unavailable');
+  assert.equal(formatAttendanceSchedule('2026-08-23T09:00:00Z', '2026-08-23T08:00:00Z'), 'Schedule unavailable');
+  assert.notEqual(formatAttendanceSchedule('2026-08-23T01:00:00Z', '2026-08-23T09:00:00Z'), 'Schedule unavailable');
+});
+
+test('attendance timestamps never render Invalid Date', () => {
+  assert.equal(formatAttendanceTimestamp(null), 'Time unavailable');
+  assert.equal(formatAttendanceTimestamp('bad-value'), 'Time unavailable');
+  assert.equal(formatAttendanceTimestamp('bad-value', 'Not recorded'), 'Not recorded');
+  assert.doesNotMatch(formatAttendanceTimestamp('2026-08-23T01:00:00Z'), /invalid date/i);
 });
 
 test('timesheet summary safely normalizes malformed values', () => {

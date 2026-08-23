@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canOpenTrustedRoute, resolveAuthRedirect } from './auth-routing.mjs';
+import { canOpenTrustedRoute, resolveAuthRedirect, shouldClearPendingTrustedRoute } from './auth-routing.mjs';
 
 test('does not redirect while auth is unresolved', () => {
   assert.equal(resolveAuthRedirect({ configured: true, sessionResolved: false, authenticated: false, segment: 'shifts' }), null);
@@ -30,4 +30,12 @@ test('defers trusted notification routes until auth resolves', () => {
 
 test('allows trusted routes in non-production demo mode after initial resolution', () => {
   assert.equal(canOpenTrustedRoute({ configured: false, sessionResolved: true, authenticated: false }), true);
+});
+
+test('clears pending trusted routes when the worker session explicitly ends', () => {
+  assert.equal(shouldClearPendingTrustedRoute('SIGNED_OUT'), true);
+  assert.equal(shouldClearPendingTrustedRoute('USER_DELETED'), true);
+  assert.equal(shouldClearPendingTrustedRoute('SIGNED_IN'), false);
+  assert.equal(shouldClearPendingTrustedRoute('TOKEN_REFRESHED'), false);
+  assert.equal(shouldClearPendingTrustedRoute('INITIAL_SESSION'), false);
 });

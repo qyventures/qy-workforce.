@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatShiftTime, normalizeAvailableShift, parseRequirements, shiftAccessibilityLabel } from './shifts.mjs';
+import { formatShiftTime, normalizeAvailableShift, parseRequirements, shiftAccessibilityLabel, shiftAcceptanceSummary } from './shifts.mjs';
 
 test('parseRequirements supports arrays and boolean maps', () => {
   assert.deepEqual(parseRequirements([' Black pants ', '', 7, 'Covered shoes']), ['Black pants', 'Covered shoes']);
@@ -49,4 +49,17 @@ test('formatShiftTime and accessibility label remain readable', () => {
   assert.match(label, /Banquet Crew/);
   assert.match(label, /S\$16\.00 per hour/);
   assert.match(label, /1 slot remaining/);
+});
+
+test('shiftAcceptanceSummary presents the commitment details before acceptance', () => {
+  const shift = normalizeAvailableShift({
+    shift_id: 'shift-3', role_name: 'Retail Promoter', client_name: 'Retailer', site_name: 'Orchard',
+    starts_at: '2026-08-24T11:00:00+08:00', ends_at: '2026-08-24T20:00:00+08:00',
+    worker_rate: 15.5, available_slots: 2,
+  });
+  assert.ok(shift);
+  const summary = shiftAcceptanceSummary(shift);
+  assert.match(summary, /Retail Promoter/);
+  assert.match(summary, /Retailer · Orchard/);
+  assert.match(summary, /S\$15\.50\/hr/);
 });

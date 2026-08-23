@@ -12,3 +12,7 @@ export function canOpenTrustedRoute({ configured, sessionResolved, authenticated
   if (!configured) return true;
   return authenticated;
 }
+
+export function shouldClearPendingTrustedRoute(authEvent) {
+  return authEvent === 'SIGNED_OUT' || authEvent === 'USER_DELETED';
+}

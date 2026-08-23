@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { isLikelyNetworkError, mobileErrorMessage } from '../lib/errors';
+import { formatMoney, payableDuration } from '../lib/earnings.mjs';
 import { supabase } from '../lib/supabase';
 
 type Assignment = {
@@ -30,6 +31,13 @@ const demo: Assignment[] = [{
   id: 'demo-assignment', accepted_at: new Date().toISOString(), cancelled_at: null,
   shifts: { id: 'demo-shift', starts_at: new Date(Date.now() + 86400000).toISOString(), ends_at: new Date(Date.now() + 86400000 + 8 * 3600000).toISOString(), status: 'assigned', worker_rate: 16, sites: { name: 'Demo Hotel', address: 'Singapore' }, roles: { name: 'F&B Service Crew' } }, timesheets: [],
 }];
+
+function formatSchedule(startsAt: string, endsAt: string) {
+  const start = new Date(startsAt);
+  const end = new Date(endsAt);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) return 'Schedule unavailable';
+  return `${start.toLocaleString()} – ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+}
 
 export default function MyShiftsScreen() {
   const [items, setItems] = useState<Assignment[]>([]);
@@ -84,22 +92,23 @@ export default function MyShiftsScreen() {
   if (loading) return <View style={styles.center} accessibilityRole="progressbar"><ActivityIndicator /><Text style={styles.muted}>Loading shifts…</Text></View>;
 
   return <ScrollView contentContainerStyle={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} />}>
-    <Text style={styles.title}>My Shifts</Text>
+    <Text style={styles.title} accessibilityRole="header">My Shifts</Text>
     <Text style={styles.subtitle}>Your accepted work, attendance and payment status.</Text>
     {error && <View style={styles.warning} accessibilityRole="alert"><Text style={styles.warningText}>{error}</Text><Pressable accessibilityRole="button" accessibilityState={{ disabled: refreshing }} disabled={refreshing} style={styles.retryButton} onPress={() => void load(true)}><Text style={styles.retryButtonText}>{refreshing ? 'Refreshing…' : 'Refresh status'}</Text></Pressable></View>}
     {items.length === 0 && <View style={styles.card}><Text style={styles.cardTitle}>No accepted shifts yet</Text><Text style={styles.muted}>Find an open shift and accept it to see it here.</Text><Pressable accessibilityRole="button" style={styles.primary} onPress={() => router.push('/shifts')}><Text style={styles.primaryText}>Find a shift</Text></Pressable></View>}
     {items.map((a) => {
       const sh = a.shifts; const ts = a.timesheets?.[0]; if (!sh) return null;
-      const start = new Date(sh.starts_at); const end = new Date(sh.ends_at);
-      return <View key={a.id} style={styles.card} accessible accessibilityLabel={`${sh.roles?.name ?? 'Shift'} at ${sh.sites?.name ?? 'site'}`}>
-        <View style={styles.row}><Text style={styles.cardTitle}>{sh.roles?.name ?? 'Shift'}</Text><Text style={styles.badge}>{ts?.status ?? sh.status}</Text></View>
+      const schedule = formatSchedule(sh.starts_at, sh.ends_at);
+      const status = ts?.status ?? sh.status;
+      return <View key={a.id} style={styles.card} accessible accessibilityLabel={`${sh.roles?.name ?? 'Shift'} at ${sh.sites?.name ?? 'site'}. ${schedule}. Status ${status}.`}>
+        <View style={styles.row}><Text style={styles.cardTitle}>{sh.roles?.name ?? 'Shift'}</Text><Text style={styles.badge}>{status}</Text></View>
         <Text style={styles.site}>{sh.sites?.name ?? 'Site'}</Text>
-        <Text style={styles.muted}>{start.toLocaleString()} – {end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+        <Text style={styles.muted}>{schedule}</Text>
         {sh.sites?.address && <Text style={styles.muted}>{sh.sites.address}</Text>}
-        {ts && <Text style={styles.pay}>{Math.floor(ts.payable_minutes / 60)}h {ts.payable_minutes % 60}m · Est. S${Number(ts.worker_amount ?? 0).toFixed(2)}</Text>}
+        {ts && <Text style={styles.pay}>{payableDuration(ts.payable_minutes)} · Est. {formatMoney(ts.worker_amount)}</Text>}
         {ts?.rejection_reason && <Text style={styles.error}>Action needed: {ts.rejection_reason}</Text>}
-        <View style={styles.actions}><Pressable accessibilityRole="button" style={styles.secondary} onPress={() => router.push({ pathname: '/assignment', params: { assignmentId: a.id } })}><Text style={styles.secondaryText}>Details</Text></Pressable><Pressable accessibilityRole="button" style={styles.secondary} onPress={() => router.push({ pathname: '/attendance', params: { assignmentId: a.id } })}><Text style={styles.secondaryText}>Attendance</Text></Pressable></View>
-        {(!ts || ts.status === 'draft' || ts.status === 'rejected') && <Pressable accessibilityRole="button" accessibilityState={{ disabled: submitting === a.id }} style={[styles.primary, submitting === a.id && styles.disabled]} disabled={submitting === a.id} onPress={() => submitTimesheet(a.id)}><Text style={styles.primaryText}>{submitting === a.id ? 'Submitting…' : 'Submit timesheet'}</Text></Pressable>}
+        <View style={styles.actions}><Pressable accessibilityRole="button" accessibilityHint="Opens shift assignment details" style={styles.secondary} onPress={() => router.push({ pathname: '/assignment', params: { assignmentId: a.id } })}><Text style={styles.secondaryText}>Details</Text></Pressable><Pressable accessibilityRole="button" accessibilityHint="Opens clock-in and clock-out controls for this assignment" style={styles.secondary} onPress={() => router.push({ pathname: '/attendance', params: { assignmentId: a.id } })}><Text style={styles.secondaryText}>Attendance</Text></Pressable></View>
+        {(!ts || ts.status === 'draft' || ts.status === 'rejected') && <Pressable accessibilityRole="button" accessibilityHint="Submits this assignment's timesheet for supervisor approval" accessibilityState={{ disabled: submitting === a.id }} style={[styles.primary, submitting === a.id && styles.disabled]} disabled={submitting === a.id} onPress={() => submitTimesheet(a.id)}><Text style={styles.primaryText}>{submitting === a.id ? 'Submitting…' : 'Submit timesheet'}</Text></Pressable>}
       </View>;
     })}
   </ScrollView>;

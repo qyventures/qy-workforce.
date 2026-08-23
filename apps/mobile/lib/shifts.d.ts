@@ -14,3 +14,4 @@ export function formatShiftTime(startsAt: string, endsAt: string): string;
 export function parseRequirements(value: unknown): string[];
 export function normalizeAvailableShift(row: unknown): AvailableShift | null;
 export function shiftAccessibilityLabel(shift: AvailableShift): string;
+export function shiftAcceptanceSummary(shift: AvailableShift): string;

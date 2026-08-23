@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleS
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { isLikelyNetworkError } from '../lib/errors';
-import { formatShiftTime, normalizeAvailableShift, shiftAccessibilityLabel, type AvailableShift } from '../lib/shifts.mjs';
+import { formatShiftTime, normalizeAvailableShift, shiftAccessibilityLabel, shiftAcceptanceSummary, type AvailableShift } from '../lib/shifts.mjs';
 
 type Shift = AvailableShift;
 
@@ -43,6 +43,7 @@ export default function ShiftsScreen() {
   useEffect(() => { void loadShifts(); }, []);
 
   const acceptShift = async (shift: Shift) => {
+    if (acceptingId !== null) return;
     if (!supabase) { router.push('/attendance'); return; }
     setAcceptingId(shift.id);
     const { data: assignmentId, error } = await supabase.rpc('accept_shift', { p_shift_id: shift.id });
@@ -65,6 +66,18 @@ export default function ShiftsScreen() {
     router.push({ pathname: '/attendance', params: { assignmentId: String(assignmentId), shiftId: shift.id } });
   };
 
+  const confirmShift = (shift: Shift) => {
+    if (acceptingId !== null) return;
+    Alert.alert(
+      'Accept this shift?',
+      `${shiftAcceptanceSummary(shift)}\n\nThe server will re-check your eligibility and availability before confirming.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Accept shift', onPress: () => void acceptShift(shift) },
+      ]
+    );
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.page} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void loadShifts(true)} accessibilityLabel="Refresh available shifts" />}>
       <View style={styles.headerRow}>
@@ -81,7 +94,7 @@ export default function ShiftsScreen() {
           <Text style={styles.meta}>{formatShiftTime(shift.startsAt, shift.endsAt)}</Text>
           <Text style={styles.meta}>{shift.availableSlots} slot{shift.availableSlots === 1 ? '' : 's'} remaining</Text>
           {shift.requirements.length > 0 && <View style={styles.tags}>{shift.requirements.map((item) => <View key={item} style={styles.tag}><Text style={styles.tagText}>{item}</Text></View>)}</View>}
-          <Pressable accessibilityRole="button" accessibilityLabel={`Accept ${shift.role} shift`} accessibilityHint="The server will re-check eligibility and availability before confirming" disabled={acceptingId !== null} style={[styles.primaryButton, acceptingId !== null && styles.disabledButton]} onPress={() => void acceptShift(shift)}><Text style={styles.primaryButtonText}>{acceptingId === shift.id ? 'Securing shift…' : 'Accept shift'}</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Accept ${shift.role} shift`} accessibilityHint="Review the shift details, then confirm before the server re-checks eligibility and availability" disabled={acceptingId !== null} style={[styles.primaryButton, acceptingId !== null && styles.disabledButton]} onPress={() => confirmShift(shift)}><Text style={styles.primaryButtonText}>{acceptingId === shift.id ? 'Securing shift…' : 'Review & accept'}</Text></Pressable>
         </View>
       ))}
       <Pressable style={styles.secondaryButton} onPress={() => router.push('/my-shifts')} accessibilityRole="button" accessibilityLabel="View my accepted shifts"><Text style={styles.secondaryButtonText}>View my accepted shifts</Text></Pressable>

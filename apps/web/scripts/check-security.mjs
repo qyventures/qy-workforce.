@@ -104,4 +104,19 @@ if (directOpsMutations.length) {
   process.exit(1);
 }
 
-console.log('Security header, Ops indexing, client-secret and least-privilege mutation checks passed.');
+// Conversion analytics must remain opt-in and respect browser privacy signals.
+const analyticsPath = path.join(root, 'app', 'analytics-events.tsx');
+const analyticsSource = fs.readFileSync(analyticsPath, 'utf8');
+const requiredAnalyticsPrivacy = [
+  "qy-workforce:analytics-consent",
+  "=== 'granted'",
+  'globalPrivacyControl',
+  "doNotTrack === '1'",
+];
+const missingAnalyticsPrivacy = requiredAnalyticsPrivacy.filter((snippet) => !analyticsSource.includes(snippet));
+if (missingAnalyticsPrivacy.length) {
+  console.error(`Analytics privacy regression: missing ${missingAnalyticsPrivacy.join(', ')}`);
+  process.exit(1);
+}
+
+console.log('Security header, Ops indexing, client-secret, least-privilege mutation and analytics-consent checks passed.');

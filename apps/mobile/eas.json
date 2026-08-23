@@ -7,11 +7,19 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "environment": "development"
+      "environment": "development",
+      "channel": "development",
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "development"
+      }
     },
     "preview": {
       "distribution": "internal",
       "environment": "preview",
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "preview"
+      },
       "android": {
         "buildType": "apk"
       },
@@ -21,7 +29,11 @@
     },
     "production": {
       "autoIncrement": true,
-      "environment": "production"
+      "environment": "production",
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "production"
+      }
     }
   },
   "submit": {

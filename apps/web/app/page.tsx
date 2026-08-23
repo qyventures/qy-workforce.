@@ -27,7 +27,7 @@ export default function HomePage() {
           <a href="/industries" data-analytics-event="home_all_industries" style={{color:'#ccc',fontSize:14}}>Explore all industries →</a>
         </div>
         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:12}}>
-          {industries.map(([name,id]) => <a key={id} href={`/industries#${id}`} data-analytics-event={`home_industry_${id}`} style={{border:'1px solid #222', borderRadius:14, padding:22, background:'#111',color:'#fff',textDecoration:'none'}}><strong>{name}</strong><div style={{color:'#777',fontSize:13,marginTop:8}}>Roles, employer use cases and worker journey →</div></a>)}
+          {industries.map(([name,id]) => <a key={id} href={`/industries/${id}`} data-analytics-event={`home_industry_${id}`} style={{border:'1px solid #222', borderRadius:14, padding:22, background:'#111',color:'#fff',textDecoration:'none'}}><strong>{name}</strong><div style={{color:'#777',fontSize:13,marginTop:8}}>Roles, employer use cases and worker journey →</div></a>)}
         </div>
       </section>
 

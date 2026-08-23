@@ -74,7 +74,7 @@ begin
   select pg_get_functiondef('public.withdraw_worker_consent(text)'::regprocedure) into withdraw_def;
 
   if position('consent.granted' in grant_def)=0
-     or position("'worker_app'" in grant_def)=0
+     or position('worker_app' in grant_def)=0
      or position('now()' in grant_def)=0 then
     raise exception 'grant_worker_consent missing audit/server-owned fields';
   end if;

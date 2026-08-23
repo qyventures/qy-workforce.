@@ -46,10 +46,22 @@ if (missingOpsLinks.length) {
   process.exit(1);
 }
 
-const dashboard = fs.readFileSync(path.join(root, 'app/ops/page.tsx'), 'utf8');
-if ((dashboard.match(/<main\b/g) ?? []).length > 0) {
-  console.error('Ops dashboard regression: page must not nest a second <main> inside the protected Ops layout.');
+function walkPages(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const fullPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) return walkPages(fullPath);
+    return entry.isFile() && entry.name === 'page.tsx' ? [fullPath] : [];
+  });
+}
+
+const opsPages = walkPages(path.join(root, 'app/ops'));
+const pagesWithNestedMain = opsPages
+  .filter((filePath) => /<main\b/.test(fs.readFileSync(filePath, 'utf8')))
+  .map((filePath) => path.relative(root, filePath));
+
+if (pagesWithNestedMain.length) {
+  console.error(`Ops landmark regression: protected Ops pages must rely on app/ops/layout.tsx for the single <main>: ${pagesWithNestedMain.join(', ')}`);
   process.exit(1);
 }
 
-console.log('Required public routes, Ops routes and Ops navigation checks passed.');
+console.log('Required public routes, Ops routes, Ops navigation and landmark checks passed.');

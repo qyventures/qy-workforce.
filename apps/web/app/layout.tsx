@@ -6,9 +6,11 @@ export const metadata: Metadata = {
   title: 'QY Workforce | Flexible staffing for Singapore',
   description: 'Verified casual workers for hospitality, F&B, cleaning, retail, promotions and events.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://workforce.qyvent.com'),
+  alternates: { canonical: '/' },
   openGraph: {
     title: 'QY Workforce',
     description: 'Flexible staffing, verified workers and operational visibility.',
+    url: '/',
     type: 'website',
   },
   robots: { index: true, follow: true },

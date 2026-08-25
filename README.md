@@ -40,3 +40,15 @@ Deliver one complete operational loop:
 ## Repository status
 
 Initial secure scaffold in progress. Singpass integration will be developed against public/staging documentation first and activated only after approved credentials are available.
+
+## Staging release readiness
+
+Use the public-value templates in `apps/mobile/.env.example` and `apps/web/.env.example`; set actual staging values only in EAS or host secret stores. Before a staging deployment, run:
+
+```sh
+node scripts/release/verify-release-readiness.mjs
+scripts/release/run-supabase-checks.sh # requires STAGING_DATABASE_URL
+STAGING_WEB_URL=https://staging.example.invalid scripts/release/run-staging-smoke.sh
+```
+
+The complete sequencing and preview-build instructions are in [docs/STAGING_RELEASE_CHECKLIST.md](docs/STAGING_RELEASE_CHECKLIST.md). These tools are staging-only and do not publish builds or submit to stores.

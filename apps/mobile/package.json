@@ -10,7 +10,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "node --test lib/*.test.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "release:verify": "node ../../scripts/release/verify-release-readiness.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

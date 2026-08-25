@@ -1,5 +1,7 @@
-import { Link } from 'expo-router';
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Link, router } from 'expo-router';
+import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { supabase } from '../lib/supabase';
 
 const cards = [
   { title: 'Find shifts', body: 'Browse eligible jobs matched to your verified roles and skills.', href: '/shifts' as const },
@@ -11,6 +13,28 @@ const cards = [
 ];
 
 export default function HomeScreen() {
+  const [checkingSession, setCheckingSession] = useState(Boolean(supabase));
+
+  useEffect(() => {
+    if (!supabase) return;
+    let mounted = true;
+
+    void supabase.auth.getSession().then(({ data, error }) => {
+      if (!mounted) return;
+      if (error || !data.session) {
+        router.replace('/sign-in');
+        return;
+      }
+      setCheckingSession(false);
+    });
+
+    return () => { mounted = false; };
+  }, []);
+
+  if (checkingSession) {
+    return <SafeAreaView style={styles.safe}><View style={styles.loading} accessibilityRole="progressbar"><ActivityIndicator color="#FFFFFF" /><Text style={styles.loadingText}>Checking your secure session…</Text></View></SafeAreaView>;
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -40,6 +64,8 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#0A0A0A' },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 },
+  loadingText: { color: '#D4D4D4', textAlign: 'center' },
   container: { padding: 24, gap: 16, paddingBottom: 48 },
   eyebrow: { color: '#A3A3A3', fontSize: 12, letterSpacing: 2 },
   title: { color: '#FFFFFF', fontSize: 34, fontWeight: '700', lineHeight: 40 },

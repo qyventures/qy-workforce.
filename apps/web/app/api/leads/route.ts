@@ -16,6 +16,13 @@ function validEmail(value: unknown) {
   return v && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? v.toLowerCase() : null;
 }
 
+function validPhone(value: unknown) {
+  const v = text(value, 32);
+  if (!v) return null;
+  const compact = v.replace(/[\s().-]/g, '');
+  return /^\+?[0-9]{8,15}$/.test(compact) ? compact : null;
+}
+
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return NextResponse.json(body, {
     status,
@@ -37,9 +44,6 @@ export async function POST(request: NextRequest) {
     return jsonResponse({ ok: false, message: 'Request is too large.' }, 413);
   }
 
-  // Browser form submissions are same-origin. Reject an explicitly foreign
-  // Origin to reduce cross-site spam while still allowing trusted server-side
-  // health checks and tests that do not send an Origin header.
   const origin = request.headers.get('origin');
   if (origin) {
     let requestOrigin: string;
@@ -66,13 +70,14 @@ export async function POST(request: NextRequest) {
     return jsonResponse({ ok: false }, 400);
   }
 
-  // Honeypot field. Do not reveal to bots why the request was discarded.
   if (text(body.website, 200)) return jsonResponse({ ok: true });
 
   const type = body.type as LeadType;
-  const consent = body.consent === true;
+  const pdpaConsent = body.pdpaConsent === true;
+  const whatsappConsent = body.whatsappConsent === true;
   const email = validEmail(body.email);
-  if (!consent || !email || (type !== 'employer' && type !== 'worker')) {
+  const phone = validPhone(body.phone);
+  if (!pdpaConsent || !email || !phone || (type !== 'employer' && type !== 'worker')) {
     return jsonResponse({ ok: false, message: 'Please complete the required fields.' }, 400);
   }
 
@@ -80,34 +85,76 @@ export async function POST(request: NextRequest) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  const now = new Date().toISOString();
+  let leadId: string | null = null;
+
   if (type === 'employer') {
     const companyName = text(body.companyName, 160);
     const contactName = text(body.contactName, 120);
-    if (!companyName || !contactName) return jsonResponse({ ok: false }, 400);
-    const { error } = await supabase.from('employer_leads').insert({
+    const deploymentTimeline = text(body.deploymentTimeline, 160);
+    const rolesHeadcount = text(body.rolesHeadcount, 500);
+    const location = text(body.location, 300);
+    if (!companyName || !contactName || !deploymentTimeline || !rolesHeadcount || !location) {
+      return jsonResponse({ ok: false, message: 'Please complete the required fields.' }, 400);
+    }
+
+    const { data, error } = await supabase.from('employer_leads').insert({
       company_name: companyName,
       contact_name: contactName,
       email,
-      phone: text(body.phone, 32),
-      industry: text(body.industry, 80),
-      manpower_need: text(body.manpowerNeed, 1000),
-      consent_at: new Date().toISOString(),
-      source: 'website',
-    });
-    if (error) return jsonResponse({ ok: false, message: 'Unable to submit right now.' }, 500);
+      phone,
+      deployment_timeline: deploymentTimeline,
+      roles_headcount: rolesHeadcount,
+      location,
+      requirements: text(body.requirements, 1000),
+      consent_at: now,
+      whatsapp_consent_at: whatsappConsent ? now : null,
+      source: 'website_employer',
+      campaign: 'meta_employer_flexible_worker_preview',
+      qualification_status: whatsappConsent ? 'queued' : 'new',
+    }).select('id').single();
+    if (error || !data?.id) return jsonResponse({ ok: false, message: 'Unable to submit right now.' }, 500);
+    leadId = data.id;
   } else {
     const fullName = text(body.fullName, 120);
-    if (!fullName) return jsonResponse({ ok: false }, 400);
-    const { error } = await supabase.from('worker_interest_leads').insert({
+    const workInterest = text(body.workInterest, 200);
+    const availability = text(body.availability, 500);
+    const preferredLocations = text(body.preferredLocations, 300);
+    if (!fullName || !workInterest || !availability || !preferredLocations) {
+      return jsonResponse({ ok: false, message: 'Please complete the required fields.' }, 400);
+    }
+
+    const { data, error } = await supabase.from('worker_interest_leads').insert({
       full_name: fullName,
       email,
-      phone: text(body.phone, 32),
-      work_interest: text(body.workInterest, 200),
-      consent_at: new Date().toISOString(),
-      source: 'website',
-    });
-    if (error) return jsonResponse({ ok: false, message: 'Unable to submit right now.' }, 500);
+      phone,
+      work_interest: workInterest,
+      availability,
+      preferred_locations: preferredLocations,
+      notes: text(body.notes, 1000),
+      consent_at: now,
+      whatsapp_consent_at: whatsappConsent ? now : null,
+      source: 'website_worker',
+      campaign: 'meta_worker_gig_preview',
+      qualification_status: whatsappConsent ? 'queued' : 'new',
+    }).select('id').single();
+    if (error || !data?.id) return jsonResponse({ ok: false, message: 'Unable to submit right now.' }, 500);
+    leadId = data.id;
   }
 
-  return jsonResponse({ ok: true });
+  if (whatsappConsent && leadId) {
+    const { error: queueError } = await supabase.from('lead_qualification_queue').insert({
+      lead_type: type,
+      lead_id: leadId,
+      channel: 'whatsapp',
+      sender: '+6584317050',
+      status: 'queued',
+    });
+    if (queueError) {
+      // Preserve the lead and consent even if qualification dispatch is temporarily unavailable.
+      return jsonResponse({ ok: true, qualificationQueued: false });
+    }
+  }
+
+  return jsonResponse({ ok: true, qualificationQueued: whatsappConsent });
 }

@@ -13,7 +13,10 @@ function base64Url(value) {
 function sanitizeCell(value) {
   if (value === null || value === undefined) return '';
   const text = String(value);
-  return /^[=+\-@]/.test(text) ? `'${text}` : text;
+  // Preserve legitimate international phone values such as +6584317050 while
+  // neutralising formula-like prefixes in free-text fields. Writes use RAW,
+  // and this extra guard protects downstream exports/copies as well.
+  return /^(?:[=@-]|\+(?!\d))/.test(text) ? `'${text}` : text;
 }
 
 export function normalizePhone(value) {

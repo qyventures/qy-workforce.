@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ConsentBanner, SiteFooter, SiteHeader, trackConversion } from './components/site-shell';
+import { ConsentBanner, SiteFooter, SiteHeader } from './components/site-shell';
 
 const industries = ['Hospitality', 'F&B', 'Cleaning', 'Retail', 'Promotions', 'Events'];
 
@@ -12,8 +12,8 @@ export default function HomePage() {
         <h1 style={{fontSize:'clamp(42px,7vw,82px)', letterSpacing:'-.055em', lineHeight:0.98, margin:'18px 0 24px', maxWidth:900}}>Flexible manpower. Clearer operations.</h1>
         <p style={{fontSize:20, lineHeight:1.5, maxWidth:720, color:'#D0D5DD'}}>For employers who need reliable casual manpower and workers looking for flexible shifts with clear expectations.</p>
         <div style={{display:'flex', gap:12, flexWrap:'wrap', marginTop:32}}>
-          <Link onClick={() => trackConversion('hero_employer_cta')} href="/employers" style={{background:'#fff', color:'#000', padding:'15px 22px', borderRadius:10, textDecoration:'none', fontWeight:700}}>Hire workers</Link>
-          <Link onClick={() => trackConversion('hero_worker_cta')} href="/workers" style={{border:'1px solid #667085', color:'#fff', padding:'15px 22px', borderRadius:10, textDecoration:'none', fontWeight:700}}>Find shifts</Link>
+          <Link href="/employers" style={{background:'#fff', color:'#000', padding:'15px 22px', borderRadius:10, textDecoration:'none', fontWeight:700}}>Hire workers</Link>
+          <Link href="/workers" style={{border:'1px solid #667085', color:'#fff', padding:'15px 22px', borderRadius:10, textDecoration:'none', fontWeight:700}}>Find shifts</Link>
           <Link href="/how-it-works" style={{border:'1px solid #475467', color:'#EAECF0', padding:'15px 22px', borderRadius:10, textDecoration:'none'}}>How it works</Link>
         </div>
       </div></section>

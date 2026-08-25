@@ -26,6 +26,7 @@ jobs:
         with:
           node-version: '22'
       - run: node ../../scripts/leads/google-sheets-handoff.test.mjs
+      - run: node ../../scripts/leads/qualification-worker.test.mjs
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run build

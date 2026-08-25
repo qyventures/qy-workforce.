@@ -1,41 +1,44 @@
-const industries = ['Hospitality', 'F&B', 'Cleaning', 'Retail', 'Promoters', 'Events'];
+import Link from 'next/link';
+import { ConsentBanner, SiteFooter, SiteHeader } from './components/site-shell';
+
+const industries = ['Hospitality', 'F&B', 'Cleaning', 'Retail', 'Promotions', 'Events'];
 
 export default function HomePage() {
   return (
-    <main style={{fontFamily:'Arial, sans-serif', background:'#0a0a0a', color:'#fff', minHeight:'100vh'}}>
-      <section style={{maxWidth:1180, margin:'0 auto', padding:'96px 24px 64px'}}>
-        <p style={{letterSpacing:3, color:'#aaa', fontSize:12}}>QY WORKFORCE</p>
-        <h1 style={{fontSize:'clamp(42px,7vw,82px)', lineHeight:0.98, margin:'18px 0 24px', maxWidth:900}}>Flexible manpower. Verified workers. Better operations.</h1>
-        <p style={{fontSize:20, lineHeight:1.5, maxWidth:720, color:'#ccc'}}>A workforce platform for employers who need reliable casual manpower and workers who want flexible shifts with clear expectations.</p>
+    <main style={{ background:'#fff', minHeight:'100vh' }}>
+      <SiteHeader />
+      <section style={{background:'#0A0A0A', color:'#fff'}}><div style={{maxWidth:1180, margin:'0 auto', padding:'clamp(62px,10vw,112px) 24px 76px'}}>
+        <p style={{letterSpacing:2.4, color:'#C7D0DE', fontSize:12, fontWeight:800}}>FLEXIBLE STAFFING IN SINGAPORE</p>
+        <h1 style={{fontSize:'clamp(42px,7vw,82px)', letterSpacing:'-.055em', lineHeight:0.98, margin:'18px 0 24px', maxWidth:900}}>Flexible manpower. Clearer operations.</h1>
+        <p style={{fontSize:20, lineHeight:1.5, maxWidth:720, color:'#D0D5DD'}}>For employers who need reliable casual manpower and workers looking for flexible shifts with clear expectations.</p>
         <div style={{display:'flex', gap:12, flexWrap:'wrap', marginTop:32}}>
-          <a href="/employers" style={{background:'#fff', color:'#000', padding:'15px 22px', borderRadius:10, textDecoration:'none', fontWeight:700}}>Hire workers</a>
-          <a href="/workers" style={{border:'1px solid #444', color:'#fff', padding:'15px 22px', borderRadius:10, textDecoration:'none', fontWeight:700}}>Find shifts</a>
-          <a href="/how-it-works" style={{border:'1px solid #333', color:'#ccc', padding:'15px 22px', borderRadius:10, textDecoration:'none'}}>How it works</a>
+          <Link href="/employers" style={{background:'#fff', color:'#000', padding:'15px 22px', borderRadius:10, textDecoration:'none', fontWeight:700}}>Hire workers</Link>
+          <Link href="/workers" style={{border:'1px solid #667085', color:'#fff', padding:'15px 22px', borderRadius:10, textDecoration:'none', fontWeight:700}}>Find shifts</Link>
+          <Link href="/how-it-works" style={{border:'1px solid #475467', color:'#EAECF0', padding:'15px 22px', borderRadius:10, textDecoration:'none'}}>How it works</Link>
         </div>
-      </section>
+      </div></section>
 
-      <section style={{maxWidth:1180, margin:'0 auto', padding:'32px 24px 80px'}}>
-        <p style={{color:'#888'}}>Industries</p>
+      <section style={{maxWidth:1180, margin:'0 auto', padding:'72px 24px'}}>
+        <p style={{color:'#475467', fontSize:13, fontWeight:800, letterSpacing:1.4}}>INDUSTRIES WE SUPPORT</p>
         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:12}}>
-          {industries.map(x => <div key={x} style={{border:'1px solid #222', borderRadius:14, padding:22, background:'#111'}}><strong>{x}</strong></div>)}
+          {industries.map(x => <div key={x} style={{border:'1px solid #EAECF0', borderRadius:14, padding:22, background:'#fff'}}><strong>{x}</strong></div>)}
         </div>
+        <Link href="/industries" style={{display:'inline-block', marginTop:20, color:'#101828', fontWeight:750}}>Explore industries →</Link>
       </section>
 
-      <section id="employers" style={{maxWidth:1180, margin:'0 auto', padding:'72px 24px', display:'grid', gap:28}}>
+      <section id="employers" style={{background:'#F9FAFB'}}><div style={{maxWidth:1180, margin:'0 auto', padding:'72px 24px', display:'grid', gap:20}}>
         <h2 style={{fontSize:42, margin:0}}>Built for employers who need fulfilment, not spreadsheets.</h2>
-        <p style={{fontSize:18, lineHeight:1.6, color:'#bbb', maxWidth:760}}>Create shifts, match verified workers, monitor attendance, approve timesheets and track labour margin from one operations view.</p>
-        <a href="/employers" style={{color:'#fff',fontWeight:700}}>Request manpower →</a>
-      </section>
+        <p style={{fontSize:18, lineHeight:1.6, color:'#475467', maxWidth:760}}>Share your role, timing and site requirements. Eligible workers can be matched to operational needs, with attendance and timesheet workflows designed for visibility.</p>
+        <Link href="/employers" style={{color:'#101828',fontWeight:750}}>Request manpower →</Link>
+      </div></section>
 
       <section id="workers" style={{maxWidth:1180, margin:'0 auto', padding:'72px 24px 80px'}}>
         <h2 style={{fontSize:42, marginBottom:16}}>One profile. More ways to work.</h2>
-        <p style={{fontSize:18, lineHeight:1.6, color:'#bbb', maxWidth:760}}>Complete verification and training once, then access shifts you are qualified for across hospitality, F&B, cleaning, retail, promotions and events.</p>
-        <a href="/workers" style={{color:'#fff',fontWeight:700}}>Register interest →</a>
+        <p style={{fontSize:18, lineHeight:1.6, color:'#475467', maxWidth:760}}>Register interest in roles that suit you. Verification and onboarding are separate steps before any work opportunity is confirmed.</p>
+        <Link href="/workers" style={{color:'#101828',fontWeight:750}}>Register interest →</Link>
       </section>
-
-      <footer style={{maxWidth:1180,margin:'0 auto',padding:'28px 24px 44px',borderTop:'1px solid #222',display:'flex',gap:18,flexWrap:'wrap',fontSize:14}}>
-        <a href="/privacy" style={{color:'#aaa'}}>Privacy</a><a href="/terms" style={{color:'#aaa'}}>Terms</a>
-      </footer>
+      <SiteFooter />
+      <ConsentBanner />
     </main>
   );
 }

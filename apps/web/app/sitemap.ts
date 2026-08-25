@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://workforce.qyvent.com';
+const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://qyworkforce.com';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const paths = ['/', '/employers', '/workers', '/how-it-works', '/industries', '/privacy', '/terms'];

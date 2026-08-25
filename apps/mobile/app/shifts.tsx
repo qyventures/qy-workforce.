@@ -52,6 +52,14 @@ export default function ShiftsScreen() {
     if (!supabase) return;
     refresh ? setRefreshing(true) : setLoading(true);
 
+    const { data: authData, error: authError } = await supabase.auth.getSession();
+    if (authError || !authData.session) {
+      setLoading(false);
+      setRefreshing(false);
+      router.replace('/sign-in');
+      return;
+    }
+
     const { data, error } = await supabase.rpc('get_available_shifts');
     if (error) {
       setConnectionIssue(isLikelyNetworkError(error));
@@ -92,7 +100,9 @@ export default function ShiftsScreen() {
 
     setConnectionIssue(false);
     setShifts((current) => current.filter((item) => item.id !== shift.id));
-    router.push({ pathname: '/attendance', params: { assignmentId: String(assignmentId), shiftId: shift.id } });
+    // Acceptance is confirmed only by the server. Show the assignment before
+    // attendance so the worker can review time, site, and rate first.
+    router.replace({ pathname: '/assignment', params: { assignmentId: String(assignmentId) } });
   };
 
   return (

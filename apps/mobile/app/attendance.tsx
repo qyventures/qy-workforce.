@@ -77,6 +77,13 @@ export default function AttendanceScreen() {
 
     setState('locating'); setLoadError(null);
     try {
+      const providerStatus = await Location.getProviderStatusAsync();
+      if (!providerStatus.locationServicesEnabled) {
+        setState(details.clock_in_at ? 'clocked-in' : 'idle');
+        Alert.alert('Turn on Location Services', 'Location Services are turned off. Turn them on in device settings, then refresh attendance status before trying again.');
+        return;
+      }
+
       const permission = await Location.requestForegroundPermissionsAsync();
       if (permission.status !== 'granted') {
         setState(details.clock_in_at ? 'clocked-in' : 'idle');

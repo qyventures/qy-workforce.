@@ -28,6 +28,16 @@ function localDate(value: Date) {
   return value.toLocaleDateString('en-CA');
 }
 
+function startOfLocalDay(value: string) {
+  return new Date(`${value}T00:00:00`);
+}
+
+function endOfLocalDayExclusive(value: string) {
+  const date = startOfLocalDay(value);
+  date.setDate(date.getDate() + 1);
+  return date;
+}
+
 function formatShiftTime(startsAt: string, endsAt: string) {
   const start = new Date(startsAt);
   const end = new Date(endsAt);
@@ -57,6 +67,7 @@ export default function ShiftsPage() {
   const [workerRate, setWorkerRate] = useState('');
   const [clientRate, setClientRate] = useState('');
   const [saving, setSaving] = useState(false);
+  const [publishingShiftId, setPublishingShiftId] = useState<string | null>(null);
 
   const totals = useMemo(() => ({
     shifts: rows.length,
@@ -73,11 +84,17 @@ export default function ShiftsPage() {
       return;
     }
 
-    const fromAt = new Date(`${from}T00:00:00`);
-    const toAt = new Date(`${to}T00:00:00`);
+    const fromAt = startOfLocalDay(from);
+    const toAt = endOfLocalDayExclusive(to);
     if (!from || !to || Number.isNaN(fromAt.getTime()) || Number.isNaN(toAt.getTime()) || toAt <= fromAt) {
       setRows([]);
       setMessage('Choose an end date after the start date.');
+      setLoading(false);
+      return;
+    }
+    if (toAt.getTime() - fromAt.getTime() > 366 * 24 * 60 * 60 * 1000) {
+      setRows([]);
+      setMessage('Choose a date range of 366 days or fewer.');
       setLoading(false);
       return;
     }
@@ -97,6 +114,39 @@ export default function ShiftsPage() {
       setRows((data ?? []) as ShiftRow[]);
     }
     setLoading(false);
+  }
+
+  async function publishDraft(shift: ShiftRow) {
+    if (!supabase) {
+      setMessage('Live shift operations are not configured in this deployment.');
+      return;
+    }
+    if (shift.status !== 'draft' || publishingShiftId) return;
+    if (new Date(shift.starts_at).getTime() <= Date.now()) {
+      setSuccess('');
+      setMessage('This draft has already reached its start time and cannot be published.');
+      return;
+    }
+
+    setPublishingShiftId(shift.shift_id);
+    setMessage('');
+    setSuccess('');
+    const { error } = await supabase.rpc('open_shift', { p_shift_id: shift.shift_id });
+    if (error) {
+      setMessage(error.message.includes('authorised') || error.message.includes('authentication')
+        ? 'Sign in with an authorised Ops account to publish shifts.'
+        : error.message.includes('only draft')
+          ? 'This shift is no longer a draft. Refresh the queue to see its current status.'
+          : error.message.includes('started')
+            ? 'This draft has already reached its start time and cannot be published.'
+            : 'Unable to publish this draft. Its status was not changed.');
+      setPublishingShiftId(null);
+      return;
+    }
+
+    setSuccess(`${shift.role_name} at ${shift.site_name} was published to eligible workers.`);
+    setPublishingShiftId(null);
+    await loadQueue(true);
   }
 
   async function loadFormOptions() {
@@ -215,7 +265,7 @@ export default function ShiftsPage() {
 
       <section style={styles.filters} aria-label="Shift queue date range">
         <label style={styles.label}>From<input style={styles.input} type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></label>
-        <label style={styles.label}>To<input style={styles.input} type="date" value={to} onChange={(event) => setTo(event.target.value)} /></label>
+        <label style={styles.label}>Through<input style={styles.input} type="date" value={to} onChange={(event) => setTo(event.target.value)} /></label>
         <button style={styles.primaryButton} onClick={() => void loadQueue()} disabled={loading}>{loading ? 'Loading…' : 'Refresh queue'}</button>
       </section>
 
@@ -234,7 +284,7 @@ export default function ShiftsPage() {
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>
-              <thead><tr><th style={styles.th}>Shift</th><th style={styles.th}>Client & site</th><th style={styles.th}>Coverage</th><th style={styles.th}>Status</th><th style={styles.th}>Rates</th></tr></thead>
+              <thead><tr><th style={styles.th}>Shift</th><th style={styles.th}>Client & site</th><th style={styles.th}>Coverage</th><th style={styles.th}>Status</th><th style={styles.th}>Rates</th><th style={styles.th}>Action</th></tr></thead>
               <tbody>{rows.map((row) => {
                 const gaps = Math.max(Number(row.headcount) - Number(row.filled_count), 0);
                 return <tr key={row.shift_id}>
@@ -243,6 +293,7 @@ export default function ShiftsPage() {
                   <td style={styles.td}><strong>{row.filled_count}/{row.headcount}</strong><div><span style={gaps === 0 ? styles.ok : styles.warn}>{gaps === 0 ? 'Covered' : `${gaps} gap${gaps === 1 ? '' : 's'}`}</span></div></td>
                   <td style={styles.td}><span style={styles.status}>{row.status.replaceAll('_', ' ')}</span></td>
                   <td style={styles.td}>{row.worker_rate == null || row.client_rate == null ? 'Not set' : <><div>Worker S${Number(row.worker_rate).toFixed(2)}/hr</div><div style={styles.muted}>Client S${Number(row.client_rate).toFixed(2)}/hr</div></>}</td>
+                  <td style={styles.td}>{row.status === 'draft' ? <button style={styles.rowAction} onClick={() => void publishDraft(row)} disabled={publishingShiftId !== null || new Date(row.starts_at).getTime() <= Date.now()} title={new Date(row.starts_at).getTime() <= Date.now() ? 'Past-start drafts cannot be published' : undefined}>{publishingShiftId === row.shift_id ? 'Publishing…' : 'Publish'}</button> : <span style={styles.muted}>No action</span>}</td>
                 </tr>;
               })}</tbody>
             </table>
@@ -265,6 +316,7 @@ const styles: Record<string, any> = {
   summary: { maxWidth: 1180, margin: '0 auto 16px', display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 12 }, summaryItem: { padding: '14px 16px', background: '#fff', border: '1px solid #E8ECF2', borderRadius: 12, color: '#667085', fontSize: 13 },
   message: { maxWidth: 1140, margin: '0 auto 14px', padding: '12px 16px', background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 12, color: '#9A3412', fontSize: 13 }, success: { maxWidth: 1140, margin: '0 auto 14px', padding: '12px 16px', background: '#ECFDF3', border: '1px solid #A6F4C5', borderRadius: 12, color: '#027A48', fontSize: 13 }, panel: { maxWidth: 1180, margin: '0 auto', background: '#fff', border: '1px solid #E8ECF2', borderRadius: 16, padding: 20 }, empty: { color: '#667085', textAlign: 'center', padding: 28 },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 }, th: { textAlign: 'left', color: '#98A2B3', padding: '10px 8px', borderBottom: '1px solid #EAECF0' }, td: { padding: '14px 8px', borderBottom: '1px solid #F0F2F5', color: '#475467', verticalAlign: 'top' }, strong: { fontWeight: 750, color: '#101828' }, muted: { color: '#98A2B3', fontSize: 12, marginTop: 4 },
+  rowAction: { border: 0, borderRadius: 8, padding: '8px 10px', background: '#3448C5', color: '#fff', fontWeight: 750, cursor: 'pointer', minWidth: 78 },
   ok: { display: 'inline-block', marginTop: 7, padding: '4px 8px', borderRadius: 999, background: '#ECFDF3', color: '#027A48', fontSize: 11, fontWeight: 700 }, warn: { display: 'inline-block', marginTop: 7, padding: '4px 8px', borderRadius: 999, background: '#FFF7ED', color: '#C2410C', fontSize: 11, fontWeight: 700 }, status: { display: 'inline-block', borderRadius: 999, padding: '4px 8px', background: '#F2F4F7', color: '#475467', fontSize: 11, fontWeight: 700, textTransform: 'capitalize' },
   note: { maxWidth: 1140, margin: '14px auto 0', padding: '14px 18px', color: '#667085', fontSize: 12, lineHeight: 1.5 },
 };

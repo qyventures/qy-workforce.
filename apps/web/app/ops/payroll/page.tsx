@@ -76,6 +76,21 @@ export default function PayrollPage() {
     else { setMessage('Batch locked. It can now be exported.'); void load(); }
   }
 
+  async function cancelBatch(batch: Batch) {
+    if (!supabase || busy || batch.status !== 'draft') return;
+    const reason = window.prompt('Why is this draft being cancelled? (10–500 characters; do not include sensitive personal data)')?.trim();
+    if (!reason) return;
+    if (reason.length < 10 || reason.length > 500) {
+      setMessage('Cancellation reason must be between 10 and 500 characters.');
+      return;
+    }
+    setBusy(true); setMessage('');
+    const { error } = await supabase.rpc('cancel_payroll_batch', { p_batch: batch.id, p_reason: reason });
+    setBusy(false);
+    if (error) setMessage(error.message.includes('only a draft') ? 'This batch is no longer a draft. Refresh and review its current status.' : error.message);
+    else { setMessage('Draft cancelled. Its timesheets are available for a new payroll batch and the reason was audited.'); void load(); }
+  }
+
   async function exportCsv(batch: Batch) {
     if (!supabase) return;
     setBusy(true); setMessage('');
@@ -138,6 +153,7 @@ export default function PayrollPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {batch.status === 'draft' && <button disabled={busy} onClick={() => lockBatch(batch.id)} style={{ padding: '9px 14px' }}>Lock batch</button>}
+                  {batch.status === 'draft' && <button disabled={busy} onClick={() => void cancelBatch(batch)} style={{ padding: '9px 14px', color: '#b42318' }}>Cancel draft</button>}
                   {(batch.status === 'locked' || batch.status === 'exported') && <button disabled={busy} onClick={() => exportCsv(batch)} style={{ padding: '9px 14px' }}>Export CSV</button>}
                 </div>
               </div>

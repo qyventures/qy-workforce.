@@ -106,6 +106,7 @@ export default function AssignmentScreen() {
   const end = new Date(shift.ends_at);
   const durationMinutes = Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000));
   const estimatedScheduledPay = shift.worker_rate == null ? null : durationMinutes / 60 * Number(shift.worker_rate);
+  const cancelled = item.cancelled_at !== null || shift.status === 'cancelled';
 
   return <ScrollView
     contentContainerStyle={styles.container}
@@ -116,6 +117,7 @@ export default function AssignmentScreen() {
     <Text style={styles.site}>{shift.sites?.name ?? 'Work site'}</Text>
 
     {error && <View style={styles.warning} accessibilityRole="alert"><Text style={styles.warningText}>{error}</Text></View>}
+    {cancelled && <View style={styles.cancelledNotice} accessibilityRole="alert"><Text style={styles.cancelledTitle}>Shift cancelled</Text><Text style={styles.cancelledText}>Operations cancelled this assignment. Do not travel to the site or attempt to clock in.</Text></View>}
 
     <View style={styles.card} accessible accessibilityLabel="Shift details">
       <Text style={styles.sectionTitle}>Shift details</Text>
@@ -137,12 +139,12 @@ export default function AssignmentScreen() {
       <Text style={styles.helper}>Clock-in/out is validated by the server against your assignment, shift timing and site geofence.</Text>
     </View>
 
-    <Pressable
+    {!cancelled && <Pressable
       accessibilityRole="button"
       accessibilityLabel="Open attendance for this shift"
       style={styles.primary}
       onPress={() => router.push({ pathname: '/attendance', params: { assignmentId: item.id } })}
-    ><Text style={styles.primaryText}>Open attendance</Text></Pressable>
+    ><Text style={styles.primaryText}>Open attendance</Text></Pressable>}
   </ScrollView>;
 }
 
@@ -165,4 +167,5 @@ const styles = StyleSheet.create({
   errorTitle: { fontSize: 20, fontWeight: '800' },
   warning: { backgroundColor: '#fff7ed', borderRadius: 12, padding: 12 },
   warningText: { color: '#9a3412', fontWeight: '600' },
+  cancelledNotice: { backgroundColor: '#fff1f0', borderRadius: 12, padding: 14, gap: 4 }, cancelledTitle: { color: '#b42318', fontSize: 17, fontWeight: '800' }, cancelledText: { color: '#912018', lineHeight: 20, fontWeight: '600' },
 });

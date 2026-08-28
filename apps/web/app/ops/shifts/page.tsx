@@ -68,6 +68,9 @@ export default function ShiftsPage() {
   const [clientRate, setClientRate] = useState('');
   const [saving, setSaving] = useState(false);
   const [publishingShiftId, setPublishingShiftId] = useState<string | null>(null);
+  const [cancellingShift, setCancellingShift] = useState<ShiftRow | null>(null);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
 
   const totals = useMemo(() => ({
     shifts: rows.length,
@@ -146,6 +149,26 @@ export default function ShiftsPage() {
 
     setSuccess(`${shift.role_name} at ${shift.site_name} was published to eligible workers.`);
     setPublishingShiftId(null);
+    await loadQueue(true);
+  }
+
+  async function cancelShift() {
+    if (!supabase || !cancellingShift || cancelling) return;
+    const reason = cancellationReason.trim();
+    if (reason.length < 10 || reason.length > 500) { setMessage('Give a cancellation reason between 10 and 500 characters.'); return; }
+    setCancelling(true); setMessage(''); setSuccess('');
+    const { error } = await supabase.rpc('cancel_shift', { p_shift_id: cancellingShift.shift_id, p_reason: reason });
+    if (error) {
+      setMessage(error.message.includes('authorised') || error.message.includes('authentication')
+        ? 'Sign in with an authorised Ops account to cancel shifts.'
+        : error.message.includes('attendance') || error.message.includes('started')
+          ? 'This shift has started or has attendance and can no longer be cancelled. Escalate it for attendance correction.'
+          : error.message.includes('only draft or open') ? 'This shift is no longer cancellable. Refresh the queue to see its current status.'
+            : 'Unable to cancel this shift. No status was changed.');
+      setCancelling(false); return;
+    }
+    setSuccess(`${cancellingShift.role_name} at ${cancellingShift.site_name} was cancelled. Affected workers will see it in My Shifts.`);
+    setCancellingShift(null); setCancellationReason(''); setCancelling(false);
     await loadQueue(true);
   }
 
@@ -278,6 +301,13 @@ export default function ShiftsPage() {
       {message && <p style={styles.message} role="alert">{message}</p>}
       {success && <p style={styles.success} role="status">{success}</p>}
 
+      {cancellingShift && <section style={styles.cancelPanel} role="dialog" aria-modal="true" aria-labelledby="cancel-shift-title">
+        <h2 id="cancel-shift-title" style={styles.h2}>Cancel {cancellingShift.role_name} shift?</h2>
+        <p style={styles.createSub}>{cancellingShift.site_name} · {formatShiftTime(cancellingShift.starts_at, cancellingShift.ends_at)}. Active assignments will be closed but retained for worker and audit history.</p>
+        <label style={{ ...styles.label, marginTop: 12 }}>Reason<textarea style={styles.textarea} value={cancellationReason} maxLength={500} rows={3} disabled={cancelling} onChange={(event) => setCancellationReason(event.target.value)} placeholder="Operational reason (10–500 characters)" /></label>
+        <div style={styles.formActions}><button style={styles.secondaryAction} disabled={cancelling} onClick={() => { setCancellingShift(null); setCancellationReason(''); }}>Keep shift</button><button style={styles.dangerAction} disabled={cancelling || cancellationReason.trim().length < 10} onClick={() => void cancelShift()}>{cancelling ? 'Cancelling…' : 'Cancel shift'}</button></div>
+      </section>}
+
       <section style={styles.panel}>
         {loading ? <p style={styles.empty}>Loading authorised shift queue…</p> : rows.length === 0 ? (
           <p style={styles.empty}>No shifts are visible for this period.</p>
@@ -293,7 +323,7 @@ export default function ShiftsPage() {
                   <td style={styles.td}><strong>{row.filled_count}/{row.headcount}</strong><div><span style={gaps === 0 ? styles.ok : styles.warn}>{gaps === 0 ? 'Covered' : `${gaps} gap${gaps === 1 ? '' : 's'}`}</span></div></td>
                   <td style={styles.td}><span style={styles.status}>{row.status.replaceAll('_', ' ')}</span></td>
                   <td style={styles.td}>{row.worker_rate == null || row.client_rate == null ? 'Not set' : <><div>Worker S${Number(row.worker_rate).toFixed(2)}/hr</div><div style={styles.muted}>Client S${Number(row.client_rate).toFixed(2)}/hr</div></>}</td>
-                  <td style={styles.td}>{row.status === 'draft' ? <button style={styles.rowAction} onClick={() => void publishDraft(row)} disabled={publishingShiftId !== null || new Date(row.starts_at).getTime() <= Date.now()} title={new Date(row.starts_at).getTime() <= Date.now() ? 'Past-start drafts cannot be published' : undefined}>{publishingShiftId === row.shift_id ? 'Publishing…' : 'Publish'}</button> : <span style={styles.muted}>No action</span>}</td>
+                  <td style={styles.td}><div style={styles.rowActions}>{row.status === 'draft' && <button style={styles.rowAction} onClick={() => void publishDraft(row)} disabled={publishingShiftId !== null || new Date(row.starts_at).getTime() <= Date.now()} title={new Date(row.starts_at).getTime() <= Date.now() ? 'Past-start drafts cannot be published' : undefined}>{publishingShiftId === row.shift_id ? 'Publishing…' : 'Publish'}</button>}{(row.status === 'draft' || row.status === 'open') && new Date(row.starts_at).getTime() > Date.now() ? <button style={styles.cancelAction} onClick={() => { setMessage(''); setSuccess(''); setCancellingShift(row); setCancellationReason(''); }}>Cancel</button> : row.status !== 'draft' && <span style={styles.muted}>No action</span>}</div></td>
                 </tr>;
               })}</tbody>
             </table>
@@ -317,6 +347,7 @@ const styles: Record<string, any> = {
   message: { maxWidth: 1140, margin: '0 auto 14px', padding: '12px 16px', background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 12, color: '#9A3412', fontSize: 13 }, success: { maxWidth: 1140, margin: '0 auto 14px', padding: '12px 16px', background: '#ECFDF3', border: '1px solid #A6F4C5', borderRadius: 12, color: '#027A48', fontSize: 13 }, panel: { maxWidth: 1180, margin: '0 auto', background: '#fff', border: '1px solid #E8ECF2', borderRadius: 16, padding: 20 }, empty: { color: '#667085', textAlign: 'center', padding: 28 },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 }, th: { textAlign: 'left', color: '#98A2B3', padding: '10px 8px', borderBottom: '1px solid #EAECF0' }, td: { padding: '14px 8px', borderBottom: '1px solid #F0F2F5', color: '#475467', verticalAlign: 'top' }, strong: { fontWeight: 750, color: '#101828' }, muted: { color: '#98A2B3', fontSize: 12, marginTop: 4 },
   rowAction: { border: 0, borderRadius: 8, padding: '8px 10px', background: '#3448C5', color: '#fff', fontWeight: 750, cursor: 'pointer', minWidth: 78 },
+  rowActions: { display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }, cancelAction: { border: '1px solid #FDA29B', borderRadius: 8, padding: '7px 10px', background: '#fff', color: '#B42318', fontWeight: 750, cursor: 'pointer' }, cancelPanel: { maxWidth: 1140, margin: '0 auto 14px', padding: 18, background: '#FFFBFA', border: '1px solid #FECDCA', borderRadius: 14 }, textarea: { border: '1px solid #D0D5DD', borderRadius: 9, padding: '10px 11px', background: '#fff', color: '#101828', resize: 'vertical' }, dangerAction: { border: 0, borderRadius: 10, padding: '11px 14px', background: '#B42318', color: '#fff', fontWeight: 700, cursor: 'pointer', minHeight: 40 },
   ok: { display: 'inline-block', marginTop: 7, padding: '4px 8px', borderRadius: 999, background: '#ECFDF3', color: '#027A48', fontSize: 11, fontWeight: 700 }, warn: { display: 'inline-block', marginTop: 7, padding: '4px 8px', borderRadius: 999, background: '#FFF7ED', color: '#C2410C', fontSize: 11, fontWeight: 700 }, status: { display: 'inline-block', borderRadius: 999, padding: '4px 8px', background: '#F2F4F7', color: '#475467', fontSize: 11, fontWeight: 700, textTransform: 'capitalize' },
   note: { maxWidth: 1140, margin: '14px auto 0', padding: '14px 18px', color: '#667085', fontSize: 12, lineHeight: 1.5 },
 };

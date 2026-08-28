@@ -6,6 +6,7 @@ SUPERVISOR_MIGRATION="supabase/migrations/202608231245_supervisor_site_assignmen
 SHIFT_DELETE_MIGRATION="supabase/migrations/202608232045_shift_deletion_integrity.sql"
 WORKER_DELETE_MIGRATION="supabase/migrations/202608232118_worker_account_hard_delete_guard.sql"
 PAYROLL_EXPORT_MIGRATION="supabase/migrations/202608232245_payroll_legacy_export_rpc_retirement.sql"
+PAYROLL_MEMBERSHIP_MIGRATION="supabase/migrations/202608290130_payroll_batch_membership_integrity.sql"
 
 # Worker timesheet submission must stay server-authoritative, monotonic and
 # derived only from trusted worker-app attendance.
@@ -78,4 +79,16 @@ grep -q 'revoke all on function public.mark_payroll_batch_exported(uuid) from au
 grep -q 'grant execute on function public.record_payroll_export(uuid,text,text,integer) to authenticated' "$PAYROLL_EXPORT_MIGRATION"
 test -f supabase/tests/payroll_legacy_export_rpc_retirement_checks.sql
 
-echo 'Critical timesheet, supervisor authorization, shift-history, worker lifecycle and payroll export invariants present.'
+# A timesheet must never be exported from more than one payroll batch. Draft
+# cancellation is the audited release path; table writes stay behind RPCs.
+test -f "$PAYROLL_MEMBERSHIP_MIGRATION"
+grep -q 'uq_payroll_batch_items_timesheet' "$PAYROLL_MEMBERSHIP_MIGRATION"
+grep -q 'on conflict (timesheet_id) do nothing' "$PAYROLL_MEMBERSHIP_MIGRATION"
+grep -q 'revoke insert, update, delete on public.payroll_batch_items from anon, authenticated' "$PAYROLL_MEMBERSHIP_MIGRATION"
+grep -q 'empty payroll batch cannot be locked' "$PAYROLL_MEMBERSHIP_MIGRATION"
+grep -q 'create or replace function public.cancel_payroll_batch' "$PAYROLL_MEMBERSHIP_MIGRATION"
+grep -q "'payroll_batch.cancelled'" "$PAYROLL_MEMBERSHIP_MIGRATION"
+grep -q 'revoke all on function public.cancel_payroll_batch(uuid,text) from public, anon' "$PAYROLL_MEMBERSHIP_MIGRATION"
+test -f supabase/tests/payroll_batch_membership_integrity_checks.sql
+
+echo 'Critical timesheet, supervisor authorization, shift-history, worker lifecycle and payroll integrity invariants present.'

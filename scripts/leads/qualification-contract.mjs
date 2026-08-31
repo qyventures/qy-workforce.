@@ -1,4 +1,4 @@
-export const QY_WORKFORCE_WHATSAPP_SENDER = '+6584317050';
+export const QY_WORKFORCE_WHATSAPP_SENDER = '+6580227816';
 export const QY_WORKFORCE_WHATSAPP_DISPLAY_NAME = 'QY Workforce';
 
 export const QUALIFICATION_RULES = Object.freeze({

@@ -1,11 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { QY_WORKFORCE_WHATSAPP_SENDER } from './qualification-contract.mjs';
 import { buildOpeningMessage, createQualificationWorker, normalizeLead } from './qualification-worker.mjs';
 
 const lead = {
   id: 'l1', name: 'Jane', phone: '+6591112222', whatsapp_consent_at: '2026-08-26T00:00:00Z',
   deployment_timeline: 'Next week', roles_headcount: '20 banquet staff', location: 'Orchard', requirements: 'Black attire',
 };
+
+test('uses the approved QY Workforce WhatsApp sender', () => {
+  assert.equal(QY_WORKFORCE_WHATSAPP_SENDER, '+6580227816');
+});
 
 test('normalises employer lead fields', () => {
   const n = normalizeLead('employer', lead);

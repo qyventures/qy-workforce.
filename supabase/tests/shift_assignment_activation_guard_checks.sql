@@ -11,7 +11,7 @@ begin
 
   if v_definition not ilike '%pg_advisory_xact_lock%'
      or v_definition not ilike '%for update of sh%'
-     or v_definition not ilike '%worker_has_deployment_prerequisites(new.worker_id)%'
+     or v_definition not ilike '%worker_is_deployable(new.worker_id)%'
      or v_definition not ilike '%worker_is_available_for_shift(%'
      or v_definition not ilike '%wr.approved%'
      or v_definition not ilike '%worker has overlapping shift%'

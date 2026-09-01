@@ -8,8 +8,8 @@ declare
 begin
   select pg_get_functiondef('public.get_available_shifts()'::regprocedure) into v_def;
 
-  if position('worker_has_deployment_prerequisites(auth.uid())' in v_def) = 0 then
-    raise exception 'get_available_shifts must enforce live deployability';
+  if position('worker_is_deployable(auth.uid())' in v_def) = 0 then
+    raise exception 'get_available_shifts must enforce final live deployability';
   end if;
 
   if position('mine.cancelled_at is null' in v_def) = 0 then

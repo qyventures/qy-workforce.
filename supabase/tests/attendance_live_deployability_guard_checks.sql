@@ -7,7 +7,7 @@ declare
 begin
   select pg_get_functiondef('public.guard_worker_clock_in_deployability()'::regprocedure) into v_def;
 
-  if position('worker_has_deployment_prerequisites(v_worker)' in v_def) = 0 then
+  if position('worker_is_deployable(v_worker)' in v_def) = 0 then
     raise exception 'clock-in guard must enforce live deployability';
   end if;
 

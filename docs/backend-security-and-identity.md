@@ -4,6 +4,8 @@
 
 QY Workforce treats identity verification, residency and work eligibility as separate facts. A successful identity check must never imply residency or employment eligibility.
 
+Worker-profile constraints keep these facts internally consistent without merging them: identity verification requires its own timestamp, residency categories require verified residency, and resetting work eligibility to `unknown` clears stale eligibility evidence.
+
 The database stores only normalized verification outcomes and hashes needed for correlation/audit. It must not store Singpass/MyInfo access tokens, refresh tokens, ID tokens, raw payloads or national identifiers in `identity_provider_sessions`.
 
 `start_identity_session` supports only `mock` and `staging` environments. Production completion is intentionally disabled until production credentials, redirect URIs, privacy review and operational approval are in place.

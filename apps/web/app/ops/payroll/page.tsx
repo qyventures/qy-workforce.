@@ -25,6 +25,22 @@ type ExportRow = {
   currency: string;
 };
 
+type Payout = {
+  payout_id: string;
+  batch_item_id: string;
+  worker_label: string;
+  shift_date: string;
+  site_name: string;
+  base_amount: number;
+  adjustment_amount: number;
+  payable_amount: number;
+  currency: string;
+  method: 'bank' | 'cash_exception' | 'other';
+  status: 'pending' | 'approved' | 'processing' | 'paid' | 'failed' | 'cancelled';
+  external_reference: string | null;
+  prepared_by_me: boolean;
+};
+
 function csvCell(value: unknown) {
   const text = String(value ?? '');
   return `"${text.replaceAll('"', '""')}"`;
@@ -42,6 +58,8 @@ export default function PayrollPage() {
   const [end, setEnd] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
+  const [payouts, setPayouts] = useState<Payout[]>([]);
 
   const configured = Boolean(supabase);
   const sorted = useMemo(() => [...batches].sort((a, b) => b.created_at.localeCompare(a.created_at)), [batches]);
@@ -123,12 +141,61 @@ export default function PayrollPage() {
     void load();
   }
 
+  async function loadPayouts(batch: Batch) {
+    if (!supabase) return;
+    setBusy(true); setMessage('');
+    const { data, error } = await supabase.rpc('get_worker_payout_control_queue', { p_batch: batch.id });
+    setBusy(false);
+    if (error) { setMessage(error.message); return; }
+    setSelectedBatch(batch);
+    setPayouts((data ?? []) as Payout[]);
+  }
+
+  async function preparePayouts(batch: Batch) {
+    if (!supabase || busy) return;
+    setBusy(true); setMessage('');
+    const { data, error } = await supabase.rpc('prepare_worker_payouts', { p_batch: batch.id });
+    setBusy(false);
+    if (error) { setMessage(error.message); return; }
+    setMessage(`${Number(data ?? 0)} payout records prepared. A different finance user must approve them.`);
+    await loadPayouts(batch);
+  }
+
+  async function transitionPayout(payout: Payout, status: 'approved' | 'processing' | 'paid' | 'failed' | 'cancelled') {
+    if (!supabase || busy) return;
+    let reference: string | null = null;
+    let method: Payout['method'] | null = null;
+    let exceptionReason: string | null = null;
+    if (status === 'approved') {
+      const choice = window.prompt('Payment method: bank, cash_exception, or other', payout.method)?.trim();
+      if (!choice) return;
+      if (!['bank', 'cash_exception', 'other'].includes(choice)) { setMessage('Choose bank, cash_exception, or other.'); return; }
+      method = choice as Payout['method'];
+      if (method === 'cash_exception') {
+        exceptionReason = window.prompt('Cash exception reason (5–500 characters; do not include bank details)')?.trim() || null;
+        if (!exceptionReason || exceptionReason.length < 5 || exceptionReason.length > 500) { setMessage('A 5–500 character cash exception reason is required.'); return; }
+      }
+    }
+    if (status === 'processing' || status === 'paid') {
+      reference = window.prompt('External payment reference (optional; max 200 characters)')?.trim() || null;
+      if (reference && reference.length > 200) { setMessage('External payment reference must be 200 characters or fewer.'); return; }
+    }
+    setBusy(true); setMessage('');
+    const { error } = await supabase.rpc('set_worker_payout_status', {
+      p_payout: payout.payout_id, p_status: status, p_external_reference: reference,
+      p_method: method, p_exception_reason: exceptionReason,
+    });
+    setBusy(false);
+    if (error) setMessage(error.message.includes('preparer cannot approve') ? 'Dual control: another finance user must approve this payout.' : error.message);
+    else if (selectedBatch) { setMessage(`Payout moved to ${status}. The transition was audited.`); await loadPayouts(selectedBatch); }
+  }
+
   return (
     <main style={{ minHeight: '100vh', background: '#f5f7fb', padding: '32px 20px', fontFamily: 'Arial, sans-serif', color: '#111827' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <Link href="/ops" style={{ color: '#475569', textDecoration: 'none' }}>← Operations</Link>
         <h1 style={{ fontSize: 34, marginBottom: 8 }}>Payroll control</h1>
-        <p style={{ color: '#64748b', marginTop: 0 }}>Finance-only batch creation, locking and auditable payroll export. Payment credentials are intentionally kept outside QY Workforce.</p>
+        <p style={{ color: '#64748b', marginTop: 0 }}>Finance-only batch creation, locking, dual-control payout tracking and auditable export. Payment credentials remain outside QY Workforce.</p>
 
         {!configured && <div style={{ padding: 14, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 12, margin: '20px 0' }}>Staging Supabase is not configured in this deployment, so live payroll actions are disabled.</div>}
         {message && <div style={{ padding: 14, background: '#eef2ff', borderRadius: 12, margin: '20px 0' }}>{message}</div>}
@@ -155,12 +222,39 @@ export default function PayrollPage() {
                   {batch.status === 'draft' && <button disabled={busy} onClick={() => lockBatch(batch.id)} style={{ padding: '9px 14px' }}>Lock batch</button>}
                   {batch.status === 'draft' && <button disabled={busy} onClick={() => void cancelBatch(batch)} style={{ padding: '9px 14px', color: '#b42318' }}>Cancel draft</button>}
                   {(batch.status === 'locked' || batch.status === 'exported') && <button disabled={busy} onClick={() => exportCsv(batch)} style={{ padding: '9px 14px' }}>Export CSV</button>}
+                  {(batch.status === 'locked' || batch.status === 'exported') && <button disabled={busy} onClick={() => void loadPayouts(batch)} style={{ padding: '9px 14px' }}>Payouts</button>}
                 </div>
               </div>
             ))}
             {configured && sorted.length === 0 && <p style={{ color: '#64748b' }}>No payroll batches yet.</p>}
           </div>
         </section>
+
+        {selectedBatch && <section style={{ marginTop: 28, background: 'white', borderRadius: 16, padding: 22, boxShadow: '0 8px 30px rgba(15,23,42,.06)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div><h2 style={{ margin: 0 }}>Worker payouts</h2><p style={{ color: '#64748b', marginBottom: 0 }}>{selectedBatch.period_start} → {selectedBatch.period_end} · worker identities are pseudonymised.</p></div>
+            {payouts.length === 0 && <button disabled={busy} onClick={() => void preparePayouts(selectedBatch)} style={{ padding: '10px 14px', background: '#111827', color: 'white', border: 0, borderRadius: 9 }}>Prepare payouts</button>}
+          </div>
+          {payouts.length === 0 ? <p style={{ color: '#64748b', marginTop: 22 }}>No payouts prepared. All pending adjustments must be independently reviewed first.</p> :
+            <div style={{ overflowX: 'auto', marginTop: 20 }}><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead><tr>{['Worker / shift','Base','Adjustments','Payable','Method / status','Action'].map((label) => <th key={label} style={{ textAlign: 'left', color: '#64748b', padding: '9px 8px', borderBottom: '1px solid #e5e7eb' }}>{label}</th>)}</tr></thead>
+              <tbody>{payouts.map((payout) => <tr key={payout.payout_id}>
+                <td style={{ padding: '12px 8px', borderBottom: '1px solid #f1f5f9' }}><strong>{payout.worker_label}</strong><div style={{ color: '#64748b', marginTop: 3 }}>{payout.shift_date} · {payout.site_name}</div></td>
+                <td style={{ padding: '12px 8px', borderBottom: '1px solid #f1f5f9' }}>{payout.currency} {Number(payout.base_amount).toFixed(2)}</td>
+                <td style={{ padding: '12px 8px', borderBottom: '1px solid #f1f5f9' }}>{Number(payout.adjustment_amount).toFixed(2)}</td>
+                <td style={{ padding: '12px 8px', borderBottom: '1px solid #f1f5f9', fontWeight: 800 }}>{Number(payout.payable_amount).toFixed(2)}</td>
+                <td style={{ padding: '12px 8px', borderBottom: '1px solid #f1f5f9' }}>{payout.method} · {payout.status}{payout.external_reference ? <div style={{ color: '#64748b' }}>Ref: {payout.external_reference}</div> : null}</td>
+                <td style={{ padding: '12px 8px', borderBottom: '1px solid #f1f5f9' }}><div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {payout.status === 'pending' && <button disabled={busy || payout.prepared_by_me} title={payout.prepared_by_me ? 'A different finance user must approve' : undefined} onClick={() => void transitionPayout(payout, 'approved')}>Approve</button>}
+                  {payout.status === 'approved' && <button disabled={busy} onClick={() => void transitionPayout(payout, 'processing')}>Processing</button>}
+                  {(payout.status === 'approved' || payout.status === 'processing') && <button disabled={busy} onClick={() => void transitionPayout(payout, 'paid')}>Mark paid</button>}
+                  {payout.status === 'processing' && <button disabled={busy} onClick={() => void transitionPayout(payout, 'failed')}>Failed</button>}
+                  {(payout.status === 'pending' || payout.status === 'approved' || payout.status === 'failed') && <button disabled={busy} onClick={() => void transitionPayout(payout, 'cancelled')}>Cancel</button>}
+                </div></td>
+              </tr>)}</tbody>
+            </table></div>}
+          <p style={{ color: '#64748b', fontSize: 12, lineHeight: 1.5, marginBottom: 0 }}>Preparation freezes approved adjustment totals. The preparer cannot approve the same payout; every transition is server-validated and audited. Do not enter bank account numbers in references or exception reasons.</p>
+        </section>}
       </div>
     </main>
   );

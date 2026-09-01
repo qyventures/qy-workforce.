@@ -12,6 +12,10 @@ begin
     raise exception 'get_available_shifts must enforce live deployability';
   end if;
 
+  if position('worker_is_deployable(auth.uid())' in v_def) = 0 then
+    raise exception 'get_available_shifts must retain the final Ops deployability gate';
+  end if;
+
   if position('mine.cancelled_at is null' in v_def) = 0 then
     raise exception 'get_available_shifts must ignore cancelled assignments';
   end if;

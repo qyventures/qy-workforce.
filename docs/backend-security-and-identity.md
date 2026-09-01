@@ -18,6 +18,8 @@ Identity sessions are short-lived and single-active per worker/provider/environm
 
 Deployability remains server-authoritative. Worker clients may express role interests and submit consent, but cannot self-approve role, vetting, training, identity, residency, eligibility or deployability state.
 
+Operational consent is an append-only decision history. `worker_has_active_consent(...)` uses only the latest decision for each purpose, so a withdrawal immediately takes effect and an old grant cannot keep a worker deployable or start an identity session. Direct consent writes are denied; workers use `set_worker_operational_consent(...)`, which validates the purpose and policy version and emits a minimised audit event. The worker shift feed checks both live prerequisites and the separate Ops-managed `status='deployable'` gate; it must not advertise shifts that acceptance will reject.
+
 ## Shift demand lifecycle
 
 Demand creation is server-authoritative. `clients`, `sites`, `roles` and `shifts` have RLS enabled, and anonymous/authenticated clients have no direct INSERT/UPDATE/DELETE privileges on those tables.
@@ -58,4 +60,4 @@ The V1 backend deliberately does not hard-delete payroll, attendance or audit re
 
 ## Staging validation
 
-After migrations are applied to a staging Supabase project, run `supabase/tests/backend_security_checks.sql` in CI or psql. The checks assert RLS on identity sessions, demand tables and privacy requests; absence of raw token/national-ID columns; separation of identity/residency/eligibility fields; required SECURITY DEFINER boundaries; no direct authenticated mutation privileges for shifts/attendance/timesheets/privacy requests; no broad margin-view access; single-active identity-session enforcement; required retention policies; concurrency/separation-of-duties controls on timesheet review; and locked, retention-aware privacy request review.
+After migrations are applied to a staging Supabase project, run `scripts/release/run-supabase-checks.sh` with a staging-only connection value. The checks assert RLS on identity sessions, consent history, demand tables and privacy requests; absence of raw token/national-ID columns; separation of identity/residency/eligibility fields; required SECURITY DEFINER boundaries; latest-decision consent enforcement; no direct authenticated mutation privileges for shifts/attendance/timesheets/privacy requests; no broad margin-view access; single-active identity-session enforcement; required retention policies; concurrency/separation-of-duties controls on timesheet review; and locked, retention-aware privacy request review.

@@ -18,6 +18,7 @@ export const metadata: Metadata = {
     siteName: 'QY Workforce',
   },
   robots: { index: true, follow: true },
+  category: 'staffing',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

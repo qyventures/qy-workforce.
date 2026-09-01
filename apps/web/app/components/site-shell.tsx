@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 const linkStyle = { color: '#475467', textDecoration: 'none', fontWeight: 650, fontSize: 14 };
 
@@ -26,7 +27,7 @@ export function SiteFooter() {
     <footer style={{ borderTop: '1px solid #EAECF0', background: '#fff' }}>
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 24px', display: 'flex', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', color: '#667085', fontSize: 13 }}>
         <span>© {new Date().getFullYear()} QY Workforce</span>
-        <div style={{ display: 'flex', gap: 18 }}><Link href="/privacy" style={linkStyle}>Privacy</Link><Link href="/terms" style={linkStyle}>Terms</Link></div>
+        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}><Link href="/privacy" style={linkStyle}>Privacy</Link><Link href="/terms" style={linkStyle}>Terms</Link><Link href="/how-it-works" style={linkStyle}>How it works</Link></div>
       </div>
     </footer>
   );
@@ -44,6 +45,10 @@ export function trackConversion(event: string) {
   navigator.sendBeacon?.(endpoint, new Blob([payload], { type: 'application/json' }));
 }
 
+export function ConversionLink({ href, event, children, style }: { href: string; event: string; children: ReactNode; style?: CSSProperties }) {
+  return <Link href={href} onClick={() => trackConversion(event)} style={style}>{children}</Link>;
+}
+
 export function ConsentBanner() {
   const [choice, setChoice] = useState<string | null>(null);
   useEffect(() => setChoice(localStorage.getItem('qy-analytics-consent')), []);
@@ -55,7 +60,7 @@ export function ConsentBanner() {
   return (
     <aside aria-label="Analytics preference" style={{ position: 'fixed', zIndex: 20, right: 16, bottom: 16, maxWidth: 430, padding: 18, border: '1px solid #D0D5DD', borderRadius: 14, background: '#fff', boxShadow: '0 12px 28px rgba(16,24,40,.16)', color: '#344054', fontSize: 14, lineHeight: 1.5 }}>
       <strong style={{ color: '#101828' }}>Optional anonymous analytics</strong>
-      <p style={{ margin: '7px 0 14px' }}>Help us understand page and button use. We never send form entries, names, emails, device IDs, or advertising cookies.</p>
+      <p style={{ margin: '7px 0 14px' }}>Help us understand page and button use. We never send form entries, names, emails, device IDs, or advertising cookies. <Link href="/privacy#analytics" style={{ color: '#344054', fontWeight: 700 }}>Learn more</Link>.</p>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button type="button" onClick={() => choose('declined')} style={{ border: '1px solid #98A2B3', borderRadius: 8, background: '#fff', color: '#344054', padding: '8px 11px', fontWeight: 700 }}>No thanks</button>
         <button type="button" onClick={() => choose('granted')} style={{ border: 0, borderRadius: 8, background: '#101828', color: '#fff', padding: '8px 11px', fontWeight: 700 }}>Allow anonymous analytics</button>

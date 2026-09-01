@@ -10,9 +10,13 @@ The database stores only normalized verification outcomes and hashes needed for 
 
 Identity sessions are short-lived and single-active per worker/provider/environment. Starting a new flow expires stale sessions and rejects overlapping live sessions to reduce callback confusion and replay risk. State and nonce values must be supplied as sufficiently long hashes rather than raw secrets.
 
+The provider/environment pairing is fixed: `mock` is available only in the `mock` environment, and `singpass_myinfo` only through the `staging` abstraction. New rows are protected by both the RPC validation and a forward-only database constraint; pre-existing invalid staging rows cannot be completed. API roles cannot select `identity_provider_sessions` directly, because those rows contain state/nonce and correlation hashes. Workers use `get_own_identity_session_status()` instead; it returns lifecycle status and timing only, never transport or subject hashes.
+
 `mark_identity_callback_received_staging`, `fail_identity_session_staging` and `expire_identity_sessions` provide explicit, audited lifecycle transitions. The bulk expiry RPC is intended for service-role scheduling, while Ops/Admin can perform staging operational recovery. Production callback handling remains disabled.
 
-`complete_identity_verification_staging` is an Ops/Admin boundary. It records the identity outcome independently from residency and work eligibility and writes an audit event.
+`complete_identity_verification_staging` is an Ops/Admin boundary. Completion requires an unexpired session that has passed through the explicit callback-received state and a hashed provider subject. The retained legacy parameters for residency and work eligibility are rejected when populated, so identity completion cannot imply either outcome.
+
+Residency and work eligibility use separate Ops/Admin boundaries: `record_residency_verification_staging` and `record_work_eligibility_staging`. Residency verification requires an explicit category when passed. Work eligibility requires its own active worker consent and records its source and check time. Each boundary emits a distinct audit action, and none of the three outcomes automatically changes another.
 
 ## Worker readiness
 

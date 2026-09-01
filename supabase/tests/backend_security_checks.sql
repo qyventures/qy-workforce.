@@ -15,6 +15,11 @@ begin
       and column_name in ('access_token','refresh_token','id_token','raw_payload','nric','uinfin')
   ) then raise exception 'identity provider sessions must not store raw tokens or national identifiers'; end if;
 
+  if has_table_privilege('authenticated', 'public.identity_provider_sessions', 'SELECT')
+     or has_table_privilege('anon', 'public.identity_provider_sessions', 'SELECT') then
+    raise exception 'identity session rows containing correlation hashes must not be directly selectable';
+  end if;
+
   if not exists (
     select 1 from information_schema.columns
     where table_schema='public' and table_name='worker_profiles' and column_name='identity_verified'

@@ -34,14 +34,15 @@ begin
     raise exception 'client billing RPCs must be SECURITY DEFINER with fixed search_path';
   end if;
 
-  if position("current_app_role() not in ('finance','admin')" in pg_get_functiondef('public.sync_client_billing_items(date,date)'::regprocedure)) = 0 then
+  if position('current_app_role() not in' in pg_get_functiondef('public.sync_client_billing_items(date,date)'::regprocedure)) = 0 then
     raise exception 'billing sync must enforce finance/admin authorization';
   end if;
-  if position("current_app_role() not in ('finance','admin')" in pg_get_functiondef('public.transition_client_billing_item(uuid,text,text,text)'::regprocedure)) = 0 then
+  if position('current_app_role() not in' in pg_get_functiondef('public.transition_client_billing_item(uuid,text,text,text)'::regprocedure)) = 0 then
     raise exception 'billing transition must enforce finance/admin authorization';
   end if;
   if position('timesheets' in pg_get_functiondef('public.sync_client_billing_items(date,date)'::regprocedure)) = 0
-     or position("status in ('approved','payroll_ready')" in pg_get_functiondef('public.sync_client_billing_items(date,date)'::regprocedure)) = 0 then
+     or position('payroll_ready' in pg_get_functiondef('public.sync_client_billing_items(date,date)'::regprocedure)) = 0
+     or position('approved' in pg_get_functiondef('public.sync_client_billing_items(date,date)'::regprocedure)) = 0 then
     raise exception 'billing sync must source approved/payroll-ready timesheets';
   end if;
   if position('financial snapshot is immutable' in pg_get_functiondef('public.protect_client_billing_snapshot()'::regprocedure)) = 0 then

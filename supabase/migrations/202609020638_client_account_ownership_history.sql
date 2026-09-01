@@ -1,5 +1,5 @@
 -- QY Workforce: audited client account ownership and CRM activity timeline.
--- Provides explicit account ownership history and immutable-ish operational activity records
+-- Provides explicit account ownership history and operational activity records
 -- without widening client data access beyond privileged roles.
 
 create table if not exists public.client_account_ownership_history (
@@ -62,7 +62,9 @@ create policy "privileged read client account activities"
   on public.client_account_activities
   for select using (public.is_privileged());
 
-create or replace view public.current_client_account_owners as
+-- SECURITY INVOKER is required so the underlying RLS policy is evaluated for the caller.
+create or replace view public.current_client_account_owners
+with (security_invoker = true) as
 select h.client_id, h.owner_id, h.assigned_by, h.assignment_reason, h.starts_at
 from public.client_account_ownership_history h
 where h.ends_at is null;

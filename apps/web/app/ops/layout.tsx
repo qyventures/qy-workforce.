@@ -25,6 +25,7 @@ const nav = [
   { href: '/ops/exceptions', label: 'Exceptions' },
   { href: '/ops/timesheets', label: 'Timesheets' },
   { href: '/ops/payroll', label: 'Payroll' },
+  { href: '/ops/reconciliation', label: 'Reconciliation' },
 ];
 
 export default function OpsLayout({ children }: { children: ReactNode }) {

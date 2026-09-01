@@ -42,9 +42,11 @@ Authenticated clients no longer have direct INSERT/UPDATE/DELETE privileges on `
 
 ## Payroll
 
-Only Finance/Admin can create, lock or export payroll batches. Authenticated clients have no direct mutation privileges on payroll batches or items; all changes use audited RPCs. Locking is serialized, rejects empty batches, revalidates that every item is still approved, prevents a timesheet from entering multiple locked/exported batches, and moves included timesheets to `payroll_ready`.
+Only Finance/Admin can create, lock or export payroll batches. Authenticated clients have no direct mutation privileges on payroll batches, items, adjustments or payouts; all changes use audited RPCs. Locking is serialized, rejects empty batches, revalidates that every item is still approved, prevents a timesheet from entering multiple locked/exported batches, and moves included timesheets to `payroll_ready`.
 
-Export requires a locked batch. Finalization verifies a canonical SHA-256 checksum and checks the supplied row count against the database item count under a row lock. Recorded export evidence is immutable; an exact retry is idempotent, while a changed format, checksum or count is rejected. The older export finalizer without evidence is not callable by authenticated users. Payment-rail credentials and bank credentials remain outside this database.
+Export requires a locked batch with a prepared payout for every item and no pending adjustments. Finalization verifies a canonical SHA-256 checksum and checks the supplied row count against the database item count under a row lock. Recorded export evidence is immutable; an exact retry is idempotent, while a changed format, checksum or count is rejected. The older export finalizer without evidence is not callable by authenticated users. Payment-rail credentials and bank credentials remain outside this database.
+
+Payroll adjustments require a second Finance/Admin reviewer and cannot be created or reviewed once a batch is exported. If a pending payout row already exists, an approved adjustment updates that pending amount under lock; once payout processing begins, adjustments fail closed. Payout rows can be prepared only before export. Moving a payout to `paid` requires a bounded external settlement/receipt reference, while audit metadata records only that a reference is present—not the reference itself. Cash exceptions additionally require a reason.
 
 ## Margin reporting
 

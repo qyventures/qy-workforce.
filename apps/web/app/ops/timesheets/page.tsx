@@ -20,6 +20,8 @@ export default function TimesheetQueue() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<QueueRow | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const counts = useMemo(() => ({
     pending: rows.length,
@@ -39,7 +41,7 @@ export default function TimesheetQueue() {
     if (error) {
       setMessage(error.message.includes('JWT') || error.message.includes('authorised')
         ? 'Sign in with an authorised supervisor or Ops account to view the live queue.'
-        : `Unable to load queue: ${error.message}`);
+        : 'Unable to load the timesheet queue. No timesheet records were changed.');
       setRows([]);
     } else {
       setRows((data ?? []) as QueueRow[]);
@@ -49,13 +51,8 @@ export default function TimesheetQueue() {
 
   useEffect(() => { void loadQueue(); }, []);
 
-  async function review(id: string, decision: 'approve' | 'reject') {
+  async function review(id: string, decision: 'approve' | 'reject', reason: string | null = null) {
     if (!supabase || busyId) return;
-    let reason: string | null = null;
-    if (decision === 'reject') {
-      reason = window.prompt('Reason for rejection (required; max 500 characters):')?.trim() || null;
-      if (!reason) return;
-    }
 
     setBusyId(id);
     setMessage('');
@@ -65,10 +62,16 @@ export default function TimesheetQueue() {
       p_rejection_reason: reason,
     });
     if (error) {
-      setMessage(`Action failed: ${error.message}`);
+      setMessage(error.message.includes('self review') ? 'You cannot review your own timesheet.'
+        : error.message.includes('site not assigned') ? 'This timesheet is outside your assigned supervisor sites.'
+          : error.message.includes('no longer awaiting') || error.message.includes('conflict') ? 'This timesheet was already reviewed. Refresh the queue for its current status.'
+            : error.message.includes('authorised') ? 'Your account is not authorised to review this timesheet.'
+              : 'Unable to record this decision. No timesheet status was changed.');
     } else {
       setRows((current) => current.filter((r) => r.timesheet_id !== id));
       setMessage(decision === 'approve' ? 'Timesheet approved and audit event recorded.' : 'Timesheet rejected and returned for correction.');
+      setRejecting(null);
+      setRejectionReason('');
     }
     setBusyId(null);
   }
@@ -95,6 +98,13 @@ export default function TimesheetQueue() {
 
       {message && <section style={styles.message}>{message}</section>}
 
+      {rejecting && <section style={styles.dialogBackdrop} role="presentation"><section style={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="reject-title">
+        <h2 id="reject-title" style={styles.h2}>Reject this timesheet?</h2>
+        <p style={styles.dialogText}>Worker {rejecting.worker_label} · {rejecting.site_name}. Give a concise correction reason. Do not include identity numbers, medical details, or other unnecessary personal data.</p>
+        <label style={styles.label}>Reason (required, up to 500 characters)<textarea style={styles.textarea} rows={4} maxLength={500} value={rejectionReason} disabled={busyId === rejecting.timesheet_id} onChange={(event) => setRejectionReason(event.target.value)} placeholder="Attendance or timesheet correction required" /></label>
+        <div style={styles.dialogActions}><button style={styles.cancel} disabled={busyId === rejecting.timesheet_id} onClick={() => { setRejecting(null); setRejectionReason(''); }}>Cancel</button><button style={styles.reject} disabled={busyId === rejecting.timesheet_id || !rejectionReason.trim()} onClick={() => void review(rejecting.timesheet_id, 'reject', rejectionReason.trim())}>{busyId === rejecting.timesheet_id ? 'Saving…' : 'Reject timesheet'}</button></div>
+      </section></section>}
+
       <section style={styles.panel}>
         {loading ? <p style={styles.empty}>Loading authorised queue…</p> : rows.length === 0 ? (
           <p style={styles.empty}>No submitted timesheets are currently visible to this account.</p>
@@ -113,7 +123,7 @@ export default function TimesheetQueue() {
                     <td style={styles.td}>
                       <div style={styles.actions}>
                         <button disabled={busyId === r.timesheet_id} onClick={() => void review(r.timesheet_id, 'approve')} style={styles.approve}>Approve</button>
-                        <button disabled={busyId === r.timesheet_id} onClick={() => void review(r.timesheet_id, 'reject')} style={styles.reject}>Reject</button>
+                        <button disabled={busyId === r.timesheet_id} onClick={() => { setMessage(''); setRejecting(r); setRejectionReason(''); }} style={styles.reject}>Reject</button>
                       </div>
                     </td>
                   </tr>
@@ -136,7 +146,7 @@ const styles: Record<string, any> = {
   header: { maxWidth: 1180, margin: '0 auto 22px', display: 'flex', justifyContent: 'space-between', gap: 20, alignItems: 'center', flexWrap: 'wrap' },
   headerActions: { display: 'flex', gap: 8, flexWrap: 'wrap' },
   eyebrow: { color: '#4D63FF', fontWeight: 800, fontSize: 12, letterSpacing: 1.2 },
-  h1: { fontSize: 34, margin: '5px 0 6px', letterSpacing: '-0.03em' },
+  h1: { fontSize: 34, margin: '5px 0 6px', letterSpacing: '-0.03em' }, h2: { margin: 0, fontSize: 20 },
   sub: { margin: 0, color: '#667085' },
   back: { color: '#344054', textDecoration: 'none', fontWeight: 700, border: '1px solid #D0D5DD', padding: '10px 13px', borderRadius: 10, background: '#fff' },
   summary: { maxWidth: 1180, margin: '0 auto 16px', display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 12, fontSize: 14, color: '#667085' },
@@ -147,5 +157,6 @@ const styles: Record<string, any> = {
   td: { padding: '14px 8px', borderBottom: '1px solid #F0F2F5', color: '#475467' }, strong: { padding: '14px 8px', borderBottom: '1px solid #F0F2F5', fontWeight: 750 },
   ok: { color: '#027A48', background: '#ECFDF3', borderRadius: 999, padding: '5px 8px', fontWeight: 700 }, warn: { color: '#B54708', background: '#FFFAEB', borderRadius: 999, padding: '5px 8px', fontWeight: 700 },
   actions: { display: 'flex', gap: 7 }, approve: { border: 0, background: '#111827', color: '#fff', padding: '8px 10px', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }, reject: { border: '1px solid #D0D5DD', background: '#fff', color: '#B42318', padding: '8px 10px', borderRadius: 8, fontWeight: 700, cursor: 'pointer' },
+  dialogBackdrop: { position: 'fixed', inset: 0, zIndex: 30, display: 'grid', placeItems: 'center', padding: 20, background: 'rgba(16,24,40,.45)' }, dialog: { width: '100%', maxWidth: 520, background: '#fff', borderRadius: 16, padding: 22, boxShadow: '0 20px 60px rgba(16,24,40,.24)' }, dialogText: { color: '#667085', lineHeight: 1.5, fontSize: 14 }, label: { display: 'grid', gap: 7, color: '#344054', fontSize: 13, fontWeight: 700 }, textarea: { resize: 'vertical', font: 'inherit', padding: 10, border: '1px solid #D0D5DD', borderRadius: 9 }, dialogActions: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }, cancel: { border: '1px solid #D0D5DD', background: '#fff', color: '#344054', padding: '8px 10px', borderRadius: 8, fontWeight: 700, cursor: 'pointer' },
   note: { maxWidth: 1140, margin: '14px auto 0', padding: '14px 18px', color: '#667085', fontSize: 12, lineHeight: 1.5 },
 };

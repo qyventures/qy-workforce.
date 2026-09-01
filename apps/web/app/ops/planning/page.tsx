@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 
 type SlaRow = {
@@ -31,6 +32,21 @@ type ForecastRow = {
   confidence: 'high' | 'medium' | 'low';
 };
 
+type GapRow = {
+  shift_id: string;
+  client_name: string;
+  site_name: string;
+  role_name: string;
+  starts_at: string;
+  required_headcount: number;
+  filled_headcount: number;
+  headcount_gap: number;
+  hours_to_start: number;
+  target_fulfilment_pct: number;
+  fulfilment_pct: number;
+  risk_level: 'critical' | 'high' | 'watch' | 'monitor';
+};
+
 const demoSla: SlaRow[] = [
   { client_id: 'demo-1', client_name: 'Harbour Hotel Group', site_id: 'demo-s1', site_name: 'Marina Bay', target_fulfilment_pct: 85, required_headcount: 148, filled_headcount: 139, fulfilment_pct: 93.92, cancellations: 4, no_shows: 2, shifts_count: 18, sla_status: 'meeting' },
   { client_id: 'demo-2', client_name: 'Lifestyle Retailer', site_id: 'demo-s2', site_name: 'Orchard', target_fulfilment_pct: 90, required_headcount: 96, filled_headcount: 84, fulfilment_pct: 87.5, cancellations: 5, no_shows: 3, shifts_count: 12, sla_status: 'watch' },
@@ -46,6 +62,7 @@ const demoForecast: ForecastRow[] = [
 export default function PlanningPage() {
   const [sla, setSla] = useState<SlaRow[]>([]);
   const [forecast, setForecast] = useState<ForecastRow[]>([]);
+  const [gaps, setGaps] = useState<GapRow[]>([]);
   const [loading, setLoading] = useState(Boolean(supabase));
   const [message, setMessage] = useState('');
 
@@ -54,16 +71,20 @@ export default function PlanningPage() {
     async function load() {
       if (!supabase) return;
       setLoading(true);
-      const [slaResult, forecastResult] = await Promise.all([
+      const [slaResult, forecastResult, gapResult] = await Promise.all([
         supabase.rpc('get_client_sla_dashboard', { p_days: 30, p_client_id: null }),
         supabase.rpc('get_ops_demand_forecast', { p_forecast_days: 14, p_history_weeks: 8, p_client_id: null }),
+        supabase.rpc('get_ops_live_headcount_gaps', { p_horizon_hours: 72, p_limit: 50 }),
       ]);
       if (!active) return;
-      if (slaResult.error || forecastResult.error) {
-        setMessage(slaResult.error?.message || forecastResult.error?.message || 'Unable to load planning data.');
+      if (slaResult.error || forecastResult.error || gapResult.error) {
+        setMessage((slaResult.error || forecastResult.error || gapResult.error)?.message.includes('authorised')
+          ? 'Sign in with an authorised Ops account to view live planning data.'
+          : 'Unable to load planning data. No operational records were changed.');
       } else {
         setSla((slaResult.data ?? []) as SlaRow[]);
         setForecast((forecastResult.data ?? []) as ForecastRow[]);
+        setGaps((gapResult.data ?? []) as GapRow[]);
       }
       setLoading(false);
     }
@@ -81,9 +102,10 @@ export default function PlanningPage() {
       fill,
       breach: slaRows.filter((row) => row.sla_status === 'breach_risk').length,
       watch: slaRows.filter((row) => row.sla_status === 'watch').length,
+      urgentGaps: gaps.filter((row) => row.risk_level === 'critical' || row.risk_level === 'high').length,
       forecastHeadcount: forecastRows.reduce((sum, row) => sum + Number(row.projected_headcount || 0), 0),
     };
-  }, [slaRows, forecastRows]);
+  }, [slaRows, forecastRows, gaps]);
 
   return (
     <section style={styles.page}>
@@ -104,7 +126,20 @@ export default function PlanningPage() {
           <Metric label="SLA breach risk" value={String(summary.breach)} sub="Sites below watch band" />
           <Metric label="SLA watch" value={String(summary.watch)} sub="Within 5 pts of target" />
           <Metric label="14-day projected demand" value={String(summary.forecastHeadcount)} sub="Forecast headcount units" />
+          <Metric label="72-hour urgent gaps" value={String(summary.urgentGaps)} sub="Critical or high priority" />
         </div>
+
+        <section style={styles.panel}>
+          <div style={styles.panelHeader}><div><h2 style={styles.h2}>Live fulfilment gaps</h2><p style={styles.panelSub}>Upcoming unfilled slots within 72 hours, ranked by shift timing and SLA risk. This view never assigns or contacts workers.</p></div><Link href="/ops/shifts" style={styles.linkButton}>Open shifts</Link></div>
+          {loading ? <p style={styles.muted}>Loading live gap alerts…</p> : gaps.length === 0 ? <p style={styles.muted}>No unfilled shifts are visible in the next 72 hours.</p> : <div style={styles.tableWrap}><table style={styles.table}>
+            <thead><tr>{['Client / site','Role & start','Filled / required','Gap','Fulfilment','Priority'].map((label) => <th key={label} style={styles.th}>{label}</th>)}</tr></thead>
+            <tbody>{gaps.map((row) => <tr key={row.shift_id}>
+              <td style={styles.td}><strong>{row.client_name}</strong><div style={styles.small}>{row.site_name}</div></td>
+              <td style={styles.td}>{row.role_name}<div style={styles.small}>{new Date(row.starts_at).toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' })} · {Number(row.hours_to_start).toFixed(1)}h</div></td>
+              <td style={styles.td}>{row.filled_headcount} / {row.required_headcount}</td><td style={styles.tdStrong}>{row.headcount_gap}</td><td style={styles.td}>{Number(row.fulfilment_pct).toFixed(1)}% <span style={styles.small}>target {Number(row.target_fulfilment_pct).toFixed(0)}%</span></td><td style={styles.td}><Risk value={row.risk_level} /></td>
+            </tr>)}</tbody>
+          </table></div>}
+        </section>
 
         <section style={styles.panel}>
           <div style={styles.panelHeader}><div><h2 style={styles.h2}>Client SLA performance</h2><p style={styles.panelSub}>Required vs filled headcount, cancellations and no-shows over the last 30 days.</p></div></div>
@@ -152,6 +187,10 @@ function Status({ value }: { value: SlaRow['sla_status'] }) {
   return <span style={{ ...styles.badge, borderColor: value === 'meeting' ? '#b7ebc6' : value === 'watch' ? '#f6d48a' : '#f1a7a7' }}>{label}</span>;
 }
 
+function Risk({ value }: { value: GapRow['risk_level'] }) {
+  return <span style={{ ...styles.badge, borderColor: value === 'critical' ? '#f1a7a7' : value === 'high' ? '#f6d48a' : '#b7ebc6' }}>{value}</span>;
+}
+
 const styles = {
   page: { minHeight: '100vh', background: '#f5f7fb', color: '#101828', padding: '36px 22px 64px' },
   wrap: { maxWidth: 1280, margin: '0 auto' },
@@ -177,5 +216,6 @@ const styles = {
   small: { color: '#98a2b3', fontSize: 12, marginTop: 3 },
   muted: { color: '#667085' },
   badge: { display: 'inline-block', border: '1px solid', borderRadius: 999, padding: '5px 9px', fontSize: 12, fontWeight: 700 },
+  linkButton: { display: 'inline-block', color: '#344054', textDecoration: 'none', fontWeight: 700, border: '1px solid #d0d5dd', padding: '9px 12px', borderRadius: 9, background: '#fff', whiteSpace: 'nowrap' as const },
   footnote: { color: '#98a2b3', fontSize: 12, lineHeight: 1.5, marginBottom: 0 },
 } as const;

@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       lead_type: type,
       lead_id: leadId,
       channel: 'whatsapp',
-      sender: '+6584317050',
+      sender: '+6580227816',
       status: 'queued',
     });
     if (queueError) {

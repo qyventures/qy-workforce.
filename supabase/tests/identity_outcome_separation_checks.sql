@@ -29,12 +29,15 @@ begin
 
   select pg_get_functiondef(p.oid) into v_eligibility
   from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-  where n.nspname='public' and p.proname='record_work_eligibility_staging';
+  where n.nspname='public' and p.proname='record_work_eligibility_staging'
+    and pg_get_function_identity_arguments(p.oid) ilike '%timestamp with time zone%';
   if v_eligibility is null
      or v_eligibility not ilike '%purpose=''work_eligibility''%'
      or v_eligibility not ilike '%work eligibility consent required%'
+     or v_eligibility not ilike '%self-review not permitted%'
+     or v_eligibility not ilike '%valid eligibility expiry required%'
      or v_eligibility not ilike '%work_eligibility.recorded%' then
-    raise exception 'work eligibility must require consent and audit independently';
+    raise exception 'work eligibility must require consent, expiry, independent review and audit';
   end if;
 
   if exists (
@@ -51,14 +54,19 @@ begin
   if not has_function_privilege('authenticated',
        'public.record_residency_verification_staging(uuid,boolean,text,text)', 'EXECUTE')
      or not has_function_privilege('authenticated',
-       'public.record_work_eligibility_staging(uuid,public.eligibility_status,text)', 'EXECUTE') then
+       'public.record_work_eligibility_staging(uuid,public.eligibility_status,text,timestamp with time zone,text)', 'EXECUTE') then
     raise exception 'authenticated ops callers require explicit outcome RPC grants';
+  end if;
+
+  if has_function_privilege('authenticated',
+       'public.record_work_eligibility_staging(uuid,public.eligibility_status,text)', 'EXECUTE') then
+    raise exception 'legacy non-expiring eligibility RPC must not remain callable';
   end if;
 
   if has_function_privilege('anon',
        'public.record_residency_verification_staging(uuid,boolean,text,text)', 'EXECUTE')
      or has_function_privilege('anon',
-       'public.record_work_eligibility_staging(uuid,public.eligibility_status,text)', 'EXECUTE') then
+       'public.record_work_eligibility_staging(uuid,public.eligibility_status,text,timestamp with time zone,text)', 'EXECUTE') then
     raise exception 'anonymous callers must not execute verification outcome RPCs';
   end if;
 end $$;

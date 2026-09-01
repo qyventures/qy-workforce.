@@ -16,11 +16,11 @@ The provider/environment pairing is fixed: `mock` is available only in the `mock
 
 `complete_identity_verification_staging` is an Ops/Admin boundary. Completion requires an unexpired session that has passed through the explicit callback-received state and a hashed provider subject. The retained legacy parameters for residency and work eligibility are rejected when populated, so identity completion cannot imply either outcome.
 
-Residency and work eligibility use separate Ops/Admin boundaries: `record_residency_verification_staging` and `record_work_eligibility_staging`. Residency verification requires an explicit category when passed. Work eligibility requires its own active worker consent and records its source and check time. Each boundary emits a distinct audit action, and none of the three outcomes automatically changes another.
+Residency and work eligibility use separate Ops/Admin boundaries: `record_residency_verification_staging` and the expiry-aware `record_work_eligibility_staging`. Residency verification requires an explicit category when passed. Work eligibility requires its own active worker consent, an independent reviewer, a bounded future expiry and an opaque evidence reference. Each review appends an immutable normalized history row and emits a distinct audit action; raw evidence and document identifiers do not belong in the database. None of the three outcomes automatically changes another.
 
 ## Worker readiness
 
-Deployability remains server-authoritative. Worker clients may express role interests and submit consent, but cannot self-approve role, vetting, training, identity, residency, eligibility or deployability state.
+Deployability remains server-authoritative. Worker clients may express role interests and submit consent, but cannot self-approve role, vetting, training, identity, residency, eligibility or deployability state. An `eligible` outcome is deployable only until `eligibility_expires_at`; legacy eligible rows without an expiry fail closed until independently re-reviewed. Training expiry, blocking vetting and consent withdrawal continue to take effect immediately through the same live predicate.
 
 ## Shift demand lifecycle
 

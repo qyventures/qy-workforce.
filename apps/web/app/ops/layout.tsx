@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 
 const nav = [
   { href: '/ops', label: 'Command Centre' },
+  { href: '/ops/planning', label: 'Planning & SLA' },
   { href: '/ops/shifts', label: 'Shifts' },
   { href: '/ops/workers', label: 'Workers' },
   { href: '/ops/clients', label: 'Clients & Sites' },

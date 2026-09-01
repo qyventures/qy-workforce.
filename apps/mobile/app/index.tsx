@@ -1,19 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Link, router } from 'expo-router';
-import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { supabase } from '../lib/supabase';
 
 const cards = [
   { title: 'Find shifts', body: 'Browse eligible jobs matched to your verified roles and skills.', href: '/shifts' as const },
   { title: 'My shifts', body: 'See accepted work, attendance status and submitted timesheets.', href: '/my-shifts' as const },
   { title: 'Earnings', body: 'Track estimated earnings and timesheet payment status in one place.', href: '/earnings' as const },
-  { title: 'Clock in / out', body: 'Verify attendance at the assigned site using geofenced location.', href: '/attendance' as const },
+  { title: 'Clock in / out', body: 'Open an accepted shift to verify attendance at its assigned site.', href: '/my-shifts' as const },
   { title: 'Readiness', body: 'See identity, eligibility, role, vetting, training and consent checks in one place.', href: '/readiness' as const },
   { title: 'Profile & training', body: 'Complete onboarding, verification, certificates and required training.', href: '/onboarding' as const },
 ];
 
 export default function HomeScreen() {
   const [checkingSession, setCheckingSession] = useState(Boolean(supabase));
+  const [signingOut, setSigningOut] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!supabase) return;
@@ -31,6 +33,35 @@ export default function HomeScreen() {
     return () => { mounted = false; };
   }, []);
 
+  function confirmSignOut() {
+    if (!supabase || signingOut) return;
+    Alert.alert('Sign out of this device?', 'Your secure session will be removed from this device.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign out',
+        style: 'destructive',
+        onPress: () => void signOut(),
+      },
+    ]);
+  }
+
+  async function signOut() {
+    if (!supabase) return;
+    setSigningOut(true);
+    setSessionError(null);
+    try {
+      // Local sign-out removes the session from this device even when the worker
+      // has no connection; server-side authorisation remains unchanged.
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (error) throw error;
+      router.replace('/sign-in');
+    } catch {
+      setSessionError('We could not remove this session. Please try again.');
+    } finally {
+      setSigningOut(false);
+    }
+  }
+
   if (checkingSession) {
     return <SafeAreaView style={styles.safe}><View style={styles.loading} accessibilityRole="progressbar"><ActivityIndicator color="#FFFFFF" /><Text style={styles.loadingText}>Checking your secure session…</Text></View></SafeAreaView>;
   }
@@ -41,6 +72,8 @@ export default function HomeScreen() {
         <Text style={styles.eyebrow}>QY WORKFORCE</Text>
         <Text style={styles.title}>Work that fits your schedule.</Text>
         <Text style={styles.subtitle}>Verified shifts, clear pay, simple attendance and one worker profile.</Text>
+
+        {sessionError ? <Text style={styles.error} accessibilityRole="alert">{sessionError}</Text> : null}
 
         <View style={styles.statusCard}>
           <Text style={styles.statusTitle}>Deployment readiness</Text>
@@ -57,6 +90,18 @@ export default function HomeScreen() {
             </View>
           </Link>
         ))}
+
+        {supabase ? (
+          <Pressable
+            onPress={confirmSignOut}
+            disabled={signingOut}
+            style={[styles.signOut, signingOut && styles.disabled]}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: signingOut, busy: signingOut }}
+          >
+            <Text style={styles.signOutText}>{signingOut ? 'Signing out…' : 'Sign out of this device'}</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -78,4 +123,8 @@ const styles = StyleSheet.create({
   cardTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '600' },
   cardBody: { color: '#B3B3B3', fontSize: 15, lineHeight: 22, marginTop: 8 },
   cardLink: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', marginTop: 12 },
+  signOut: { minHeight: 48, alignItems: 'center', justifyContent: 'center', padding: 12, marginTop: 4 },
+  signOutText: { color: '#D4D4D4', fontSize: 15, fontWeight: '600' },
+  disabled: { opacity: 0.55 },
+  error: { color: '#FCA5A5', fontSize: 14, lineHeight: 20 },
 });

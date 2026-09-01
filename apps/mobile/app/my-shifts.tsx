@@ -31,6 +31,14 @@ const demo: Assignment[] = [{
   shifts: { id: 'demo-shift', starts_at: new Date(Date.now() + 86400000).toISOString(), ends_at: new Date(Date.now() + 86400000 + 8 * 3600000).toISOString(), status: 'assigned', worker_rate: 16, sites: { name: 'Demo Hotel', address: 'Singapore' }, roles: { name: 'F&B Service Crew' } }, timesheets: [],
 }];
 
+function statusLabel(status: string | null | undefined) {
+  const labels: Record<string, string> = {
+    assigned: 'Accepted', draft: 'Ready to submit', submitted: 'Under review',
+    approved: 'Approved', rejected: 'Update needed', payroll_ready: 'Payroll ready', paid: 'Paid',
+  };
+  return labels[status ?? ''] ?? (status ? status.replaceAll('_', ' ') : 'Accepted');
+}
+
 export default function MyShiftsScreen() {
   const [items, setItems] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +100,7 @@ export default function MyShiftsScreen() {
       const cancelled = a.cancelled_at !== null || sh.status === 'cancelled';
       const start = new Date(sh.starts_at); const end = new Date(sh.ends_at);
       return <View key={a.id} style={styles.card} accessible accessibilityLabel={`${sh.roles?.name ?? 'Shift'} at ${sh.sites?.name ?? 'site'}`}>
-        <View style={styles.row}><Text style={styles.cardTitle}>{sh.roles?.name ?? 'Shift'}</Text><Text style={[styles.badge, cancelled && styles.cancelledBadge]}>{cancelled ? 'Cancelled' : ts?.status ?? sh.status}</Text></View>
+        <View style={styles.row}><Text style={styles.cardTitle}>{sh.roles?.name ?? 'Shift'}</Text><Text style={[styles.badge, cancelled && styles.cancelledBadge]}>{cancelled ? 'Cancelled' : statusLabel(ts?.status ?? sh.status)}</Text></View>
         <Text style={styles.site}>{sh.sites?.name ?? 'Site'}</Text>
         <Text style={styles.muted}>{start.toLocaleString()} – {end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
         {sh.sites?.address && <Text style={styles.muted}>{sh.sites.address}</Text>}
@@ -100,12 +108,13 @@ export default function MyShiftsScreen() {
         {ts?.rejection_reason && <Text style={styles.error}>Action needed: {ts.rejection_reason}</Text>}
         {cancelled && <Text style={styles.cancelledNotice}>Operations cancelled this shift. Do not travel to the site or clock attendance.</Text>}
         <View style={styles.actions}><Pressable accessibilityRole="button" style={styles.secondary} onPress={() => router.push({ pathname: '/assignment', params: { assignmentId: a.id } })}><Text style={styles.secondaryText}>Details</Text></Pressable>{!cancelled && <Pressable accessibilityRole="button" style={styles.secondary} onPress={() => router.push({ pathname: '/attendance', params: { assignmentId: a.id } })}><Text style={styles.secondaryText}>Attendance</Text></Pressable>}</View>
-        {!cancelled && (!ts || ts.status === 'draft' || ts.status === 'rejected') && <Pressable accessibilityRole="button" accessibilityState={{ disabled: submitting === a.id }} style={[styles.primary, submitting === a.id && styles.disabled]} disabled={submitting === a.id} onPress={() => submitTimesheet(a.id)}><Text style={styles.primaryText}>{submitting === a.id ? 'Submitting…' : 'Submit timesheet'}</Text></Pressable>}
+        {!cancelled && ts && (ts.status === 'draft' || ts.status === 'rejected') && <Pressable accessibilityRole="button" accessibilityState={{ disabled: submitting === a.id }} style={[styles.primary, submitting === a.id && styles.disabled]} disabled={submitting === a.id} onPress={() => submitTimesheet(a.id)}><Text style={styles.primaryText}>{submitting === a.id ? 'Submitting…' : ts.status === 'rejected' ? 'Resubmit timesheet' : 'Submit timesheet'}</Text></Pressable>}
+        {!cancelled && !ts && <Text style={styles.helper}>Complete trusted clock-in and clock-out first. A timesheet will then be created for you to review and submit.</Text>}
       </View>;
     })}
   </ScrollView>;
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, gap: 14, paddingBottom: 48 }, center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }, title: { fontSize: 30, fontWeight: '800' }, subtitle: { fontSize: 16, color: '#5f6670', marginBottom: 6 }, card: { borderWidth: 1, borderColor: '#e6e8eb', borderRadius: 18, padding: 16, gap: 9 }, row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 }, cardTitle: { fontSize: 18, fontWeight: '700', flex: 1 }, site: { fontSize: 16, fontWeight: '600' }, muted: { color: '#68707b' }, badge: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' }, pay: { marginTop: 4, fontWeight: '700' }, error: { color: '#9b2c2c', fontWeight: '600' }, actions: { flexDirection: 'row', gap: 10, marginTop: 6 }, primary: { borderRadius: 12, padding: 13, minHeight: 48, backgroundColor: '#111', alignItems: 'center', justifyContent: 'center' }, primaryText: { color: '#fff', fontWeight: '700' }, secondary: { flex: 1, borderRadius: 12, padding: 13, minHeight: 48, borderWidth: 1, borderColor: '#c9cdd2', alignItems: 'center', justifyContent: 'center' }, secondaryText: { fontWeight: '700' }, disabled: { opacity: 0.55 }, warning: { backgroundColor: '#fff7ed', borderRadius: 12, padding: 12 }, warningText: { color: '#9a3412', fontWeight: '600' }, retryButton: { borderWidth: 1, borderColor: '#fdba74', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12, minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 10 }, retryButtonText: { color: '#9a3412', fontWeight: '800' }, cancelledBadge: { color: '#b42318' }, cancelledNotice: { color: '#b42318', backgroundColor: '#fff1f0', borderRadius: 10, padding: 10, fontWeight: '700', lineHeight: 20 },
+  container: { padding: 20, gap: 14, paddingBottom: 48 }, center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }, title: { fontSize: 30, fontWeight: '800' }, subtitle: { fontSize: 16, color: '#5f6670', marginBottom: 6 }, card: { borderWidth: 1, borderColor: '#e6e8eb', borderRadius: 18, padding: 16, gap: 9 }, row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 }, cardTitle: { fontSize: 18, fontWeight: '700', flex: 1 }, site: { fontSize: 16, fontWeight: '600' }, muted: { color: '#68707b' }, helper: { color: '#68707b', lineHeight: 20 }, badge: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' }, pay: { marginTop: 4, fontWeight: '700' }, error: { color: '#9b2c2c', fontWeight: '600' }, actions: { flexDirection: 'row', gap: 10, marginTop: 6 }, primary: { borderRadius: 12, padding: 13, minHeight: 48, backgroundColor: '#111', alignItems: 'center', justifyContent: 'center' }, primaryText: { color: '#fff', fontWeight: '700' }, secondary: { flex: 1, borderRadius: 12, padding: 13, minHeight: 48, borderWidth: 1, borderColor: '#c9cdd2', alignItems: 'center', justifyContent: 'center' }, secondaryText: { fontWeight: '700' }, disabled: { opacity: 0.55 }, warning: { backgroundColor: '#fff7ed', borderRadius: 12, padding: 12 }, warningText: { color: '#9a3412', fontWeight: '600' }, retryButton: { borderWidth: 1, borderColor: '#fdba74', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12, minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 10 }, retryButtonText: { color: '#9a3412', fontWeight: '800' }, cancelledBadge: { color: '#b42318' }, cancelledNotice: { color: '#b42318', backgroundColor: '#fff1f0', borderRadius: 10, padding: 10, fontWeight: '700', lineHeight: 20 },
 });

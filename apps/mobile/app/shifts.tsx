@@ -16,9 +16,18 @@ type Shift = {
   availableSlots: number;
 };
 
+function demoDate(daysAhead: number, hour: number, durationHours: number) {
+  const start = new Date();
+  start.setDate(start.getDate() + daysAhead);
+  start.setHours(hour, 0, 0, 0);
+  return { startsAt: start.toISOString(), endsAt: new Date(start.getTime() + durationHours * 60 * 60 * 1000).toISOString() };
+}
+
+const firstDemoTime = demoDate(1, 17, 6);
+const secondDemoTime = demoDate(2, 11, 9);
 const demoShifts: Shift[] = [
-  { id: 'shift-001', role: 'Banquet Crew', client: 'Harbour Hotel', site: 'Marina Bay', startsAt: '2026-08-22T17:00:00+08:00', endsAt: '2026-08-22T23:00:00+08:00', rate: 16, requirements: ['Black pants', 'Covered shoes'], availableSlots: 4 },
-  { id: 'shift-002', role: 'Retail Promoter', client: 'Lifestyle Retailer', site: 'Orchard', startsAt: '2026-08-23T11:00:00+08:00', endsAt: '2026-08-23T20:00:00+08:00', rate: 15, requirements: ['Customer service'], availableSlots: 2 },
+  { id: 'shift-001', role: 'Banquet Crew', client: 'Harbour Hotel', site: 'Marina Bay', ...firstDemoTime, rate: 16, requirements: ['Black pants', 'Covered shoes'], availableSlots: 4 },
+  { id: 'shift-002', role: 'Retail Promoter', client: 'Lifestyle Retailer', site: 'Orchard', ...secondDemoTime, rate: 15, requirements: ['Customer service'], availableSlots: 2 },
 ];
 
 function formatShiftTime(startsAt: string, endsAt: string) {

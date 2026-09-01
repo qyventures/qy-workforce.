@@ -45,8 +45,13 @@ export default function AttendanceScreen() {
   async function load(asRefresh = false) {
     if (asRefresh) setRefreshingState(true); else setLoading(true);
     setLoadError(null);
-    if (!supabase || !assignmentId || assignmentId === 'demo-assignment') {
+    if (!supabase) {
       setDetails(demo); setState('idle'); setLoading(false); setRefreshingState(false); return;
+    }
+    if (!assignmentId) {
+      setDetails(null);
+      setLoadError('Choose an accepted shift from My Shifts before recording attendance.');
+      setLoading(false); setRefreshingState(false); return;
     }
     try {
       const { data: authData, error: authError } = await supabase.auth.getUser();
@@ -69,7 +74,7 @@ export default function AttendanceScreen() {
 
   const verifyAndRecord = async (action: 'in' | 'out') => {
     if (!details) return;
-    if (!supabase || details.assignment_id === 'demo-assignment') {
+    if (!supabase) {
       setState(action === 'in' ? 'clocked-in' : 'clocked-out');
       if (action === 'out') setDetails((current) => current ? { ...current, timesheet: { id: 'demo-timesheet', status: 'draft', payable_minutes: 360, worker_amount: 96, submitted_at: null } } : current);
       return;

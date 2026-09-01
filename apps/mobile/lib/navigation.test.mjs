@@ -18,6 +18,15 @@ test('allows assignment routes only with a valid assignment id', () => {
   assert.equal(resolveAppRoute('qyworkforce://assignment'), null);
 });
 
+test('allows attendance routes only with a valid assignment id', () => {
+  assert.equal(
+    resolveAppRoute(`qyworkforce://attendance?assignmentId=${assignmentId}`),
+    `/attendance?assignmentId=${assignmentId}`,
+  );
+  assert.equal(resolveAppRoute('qyworkforce://attendance'), null);
+  assert.equal(resolveAppRoute('qyworkforce://attendance?assignmentId=not-an-id'), null);
+});
+
 test('rejects untrusted schemes and unknown routes', () => {
   assert.equal(resolveAppRoute('https://example.com/shifts'), null);
   assert.equal(resolveAppRoute('javascript:alert(1)'), null);

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
+import { mobileErrorMessage } from '../lib/errors';
 import { supabase } from '../lib/supabase';
 
 const POLICY_VERSION = '2026-08-22';
@@ -20,6 +21,7 @@ export default function OnboardingScreen() {
   const [selected, setSelected] = useState<string[]>([]);
   const [consented, setConsented] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const canContinue = useMemo(
     () => fullName.trim().length >= 2 && selected.length > 0 && consented && !submitting,
@@ -27,11 +29,15 @@ export default function OnboardingScreen() {
   );
 
   function toggleInterest(code: string) {
+    setError(null);
     setSelected(current => current.includes(code) ? current.filter(x => x !== code) : [...current, code]);
   }
 
   async function submit() {
-    if (!canContinue) return;
+    if (!canContinue) {
+      setError('Enter your name, choose at least one work interest, and record your consent to continue.');
+      return;
+    }
 
     if (!supabase) {
       Alert.alert('Demo mode', 'Profile data was not transmitted because the staging backend is not configured on this build.');
@@ -40,6 +46,7 @@ export default function OnboardingScreen() {
     }
 
     setSubmitting(true);
+    setError(null);
     try {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
@@ -68,7 +75,8 @@ export default function OnboardingScreen() {
 
       router.replace('/readiness');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to complete onboarding.';
+      const message = mobileErrorMessage(error, 'Unable to complete onboarding. Check your connection and try again.');
+      setError(message);
       Alert.alert('Onboarding not completed', message);
     } finally {
       setSubmitting(false);
@@ -84,16 +92,18 @@ export default function OnboardingScreen() {
 
         <TextInput
           value={fullName}
-          onChangeText={setFullName}
+          onChangeText={(value) => { setFullName(value); setError(null); }}
           placeholder="Full name"
           placeholderTextColor="#777"
           autoComplete="name"
           textContentType="name"
           style={styles.input}
+          accessibilityLabel="Full name"
+          editable={!submitting}
         />
         <TextInput
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(value) => { setEmail(value); setError(null); }}
           placeholder="Email (optional)"
           placeholderTextColor="#777"
           keyboardType="email-address"
@@ -101,6 +111,8 @@ export default function OnboardingScreen() {
           autoComplete="email"
           textContentType="emailAddress"
           style={styles.input}
+          accessibilityLabel="Email address, optional"
+          editable={!submitting}
         />
 
         <Text style={styles.section}>Primary work interests</Text>
@@ -115,6 +127,8 @@ export default function OnboardingScreen() {
                 style={[styles.tag, active && styles.tagActive]}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: active }}
+                accessibilityLabel={`${item.label}, ${active ? 'selected' : 'not selected'}`}
+                disabled={submitting}
               >
                 <Text style={[styles.tagText, active && styles.tagTextActive]}>{item.label}</Text>
               </TouchableOpacity>
@@ -123,16 +137,19 @@ export default function OnboardingScreen() {
         </View>
 
         <TouchableOpacity
-          onPress={() => setConsented(!consented)}
+          onPress={() => { setConsented(!consented); setError(null); }}
           style={styles.consent}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: consented }}
+          accessibilityLabel={`Consent to workforce data processing, ${consented ? 'selected' : 'not selected'}`}
+          disabled={submitting}
         >
           <View style={[styles.box, consented && styles.boxChecked]}><Text style={styles.check}>{consented ? '✓' : ''}</Text></View>
           <Text style={styles.consentText}>I consent to QY Workforce using my data for identity verification, work eligibility, location-based attendance and workforce administration under policy version {POLICY_VERSION}.</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity disabled={!canContinue} onPress={submit} style={[styles.button, !canContinue && styles.buttonDisabled]}>
+        {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
+        <TouchableOpacity disabled={submitting} onPress={submit} style={[styles.button, !canContinue && styles.buttonIncomplete, submitting && styles.buttonDisabled]} accessibilityRole="button" accessibilityState={{ disabled: submitting, busy: submitting }}>
           <Text style={styles.buttonText}>{submitting ? 'Saving…' : 'Continue to readiness'}</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -141,5 +158,5 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:{flex:1,backgroundColor:'#0A0A0A'},container:{padding:24,gap:16},kicker:{color:'#888',fontSize:12,letterSpacing:2},title:{color:'#fff',fontSize:32,fontWeight:'700'},body:{color:'#bbb',fontSize:15,lineHeight:22},input:{borderWidth:1,borderColor:'#333',borderRadius:12,padding:16,color:'#fff',backgroundColor:'#111'},section:{color:'#fff',fontSize:17,fontWeight:'600',marginTop:4},hint:{color:'#8f8f8f',fontSize:13,lineHeight:19,marginTop:-8},tags:{flexDirection:'row',flexWrap:'wrap',gap:8},tag:{borderWidth:1,borderColor:'#333',borderRadius:999,paddingVertical:9,paddingHorizontal:13},tagActive:{backgroundColor:'#fff',borderColor:'#fff'},tagText:{color:'#ddd'},tagTextActive:{color:'#000',fontWeight:'700'},consent:{flexDirection:'row',gap:12,alignItems:'flex-start',marginTop:8},box:{width:22,height:22,borderRadius:5,borderWidth:1,borderColor:'#666',alignItems:'center',justifyContent:'center'},boxChecked:{backgroundColor:'#fff'},check:{color:'#000',fontWeight:'800'},consentText:{color:'#bbb',flex:1,lineHeight:20},button:{backgroundColor:'#fff',borderRadius:12,padding:16,alignItems:'center',marginTop:8},buttonDisabled:{opacity:0.35},buttonText:{color:'#000',fontWeight:'700'}
+  safe:{flex:1,backgroundColor:'#0A0A0A'},container:{padding:24,gap:16},kicker:{color:'#888',fontSize:12,letterSpacing:2},title:{color:'#fff',fontSize:32,fontWeight:'700'},body:{color:'#bbb',fontSize:15,lineHeight:22},input:{borderWidth:1,borderColor:'#333',borderRadius:12,padding:16,color:'#fff',backgroundColor:'#111'},section:{color:'#fff',fontSize:17,fontWeight:'600',marginTop:4},hint:{color:'#8f8f8f',fontSize:13,lineHeight:19,marginTop:-8},tags:{flexDirection:'row',flexWrap:'wrap',gap:8},tag:{borderWidth:1,borderColor:'#333',borderRadius:999,paddingVertical:9,paddingHorizontal:13},tagActive:{backgroundColor:'#fff',borderColor:'#fff'},tagText:{color:'#ddd'},tagTextActive:{color:'#000',fontWeight:'700'},consent:{flexDirection:'row',gap:12,alignItems:'flex-start',marginTop:8},box:{width:22,height:22,borderRadius:5,borderWidth:1,borderColor:'#666',alignItems:'center',justifyContent:'center'},boxChecked:{backgroundColor:'#fff'},check:{color:'#000',fontWeight:'800'},consentText:{color:'#bbb',flex:1,lineHeight:20},button:{backgroundColor:'#fff',borderRadius:12,padding:16,alignItems:'center',marginTop:8},buttonIncomplete:{opacity:0.7},buttonDisabled:{opacity:0.35},buttonText:{color:'#000',fontWeight:'700'},error:{color:'#FCA5A5',lineHeight:20}
 });

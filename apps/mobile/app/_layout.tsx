@@ -28,6 +28,20 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    const client = supabase;
+    if (!client) return;
+
+    // Screens also verify their own data access, but this prevents a signed-out
+    // worker from remaining on a stale authenticated screen after sign-out or
+    // an expired session is cleared by the auth client.
+    const { data: listener } = client.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') router.replace('/sign-in');
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, [router]);
+
+  useEffect(() => {
     let active = true;
 
     const openTrustedRoute = (url: string | null) => {

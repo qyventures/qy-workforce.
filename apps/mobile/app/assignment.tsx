@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { mobileErrorMessage } from '../lib/errors';
 import { supabase } from '../lib/supabase';
 
 type AssignmentDetail = {
@@ -61,33 +62,37 @@ export default function AssignmentScreen() {
     }
 
     if (!assignmentId) {
+      setItem(null);
       setError('This assignment link is incomplete. Return to My Shifts and open it again.');
       setLoading(false);
       setRefreshing(false);
       return;
     }
 
-    const { data: authData } = await supabase.auth.getUser();
-    if (!authData.user) {
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!authData.user) {
+        router.replace('/sign-in');
+        return;
+      }
+
+      const { data, error: queryError } = await supabase
+        .from('shift_assignments')
+        .select('id,accepted_at,cancelled_at,shifts(id,starts_at,ends_at,status,worker_rate,sites(name,address),roles(name)),timesheets(id,status,payable_minutes,worker_amount,rejection_reason)')
+        .eq('id', assignmentId)
+        .eq('worker_id', authData.user.id)
+        .maybeSingle();
+
+      if (queryError) throw queryError;
+      if (!data) setError('This assignment is unavailable or no longer belongs to your account.');
+      else setItem(data as unknown as AssignmentDetail);
+    } catch (loadError) {
+      setError(mobileErrorMessage(loadError, 'We could not load this assignment. Check your connection and try again.'));
+    } finally {
       setLoading(false);
       setRefreshing(false);
-      router.replace('/sign-in');
-      return;
     }
-
-    const { data, error: queryError } = await supabase
-      .from('shift_assignments')
-      .select('id,accepted_at,cancelled_at,shifts(id,starts_at,ends_at,status,worker_rate,sites(name,address),roles(name)),timesheets(id,status,payable_minutes,worker_amount,rejection_reason)')
-      .eq('id', assignmentId)
-      .eq('worker_id', authData.user.id)
-      .maybeSingle();
-
-    if (queryError) setError('We could not load this assignment. Pull down to try again.');
-    else if (!data) setError('This assignment is unavailable or no longer belongs to your account.');
-    else setItem(data as unknown as AssignmentDetail);
-
-    setLoading(false);
-    setRefreshing(false);
   }, [assignmentId]);
 
   useEffect(() => { void load(); }, [load]);
@@ -97,7 +102,7 @@ export default function AssignmentScreen() {
   }
 
   if (!item || !item.shifts) {
-    return <View style={styles.center}><Text style={styles.errorTitle}>Assignment unavailable</Text><Text style={styles.muted}>{error ?? 'Please return to My Shifts.'}</Text><Pressable accessibilityRole="button" style={styles.primary} onPress={() => router.replace('/my-shifts')}><Text style={styles.primaryText}>Back to My Shifts</Text></Pressable></View>;
+    return <View style={styles.center}><Text style={styles.errorTitle}>Assignment unavailable</Text><Text style={styles.muted}>{error ?? 'Please return to My Shifts.'}</Text><Pressable accessibilityRole="button" style={styles.primary} disabled={refreshing} onPress={() => void load(true)}><Text style={styles.primaryText}>{refreshing ? 'Retrying…' : 'Retry'}</Text></Pressable><Pressable accessibilityRole="button" style={styles.secondary} onPress={() => router.replace('/my-shifts')}><Text style={styles.secondaryText}>Back to My Shifts</Text></Pressable></View>;
   }
 
   const shift = item.shifts;
@@ -112,7 +117,7 @@ export default function AssignmentScreen() {
     contentContainerStyle={styles.container}
     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} />}
   >
-    <Pressable accessibilityRole="button" accessibilityLabel="Back to My Shifts" onPress={() => router.back()}><Text style={styles.back}>‹ My Shifts</Text></Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel="Back to My Shifts" onPress={() => router.replace('/my-shifts')}><Text style={styles.back}>‹ My Shifts</Text></Pressable>
     <Text style={styles.title}>{shift.roles?.name ?? 'Shift assignment'}</Text>
     <Text style={styles.site}>{shift.sites?.name ?? 'Work site'}</Text>
 

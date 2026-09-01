@@ -7,6 +7,10 @@ declare
 begin
   if to_regclass('public.privacy_requests') is null then raise exception 'privacy_requests missing'; end if;
   if to_regclass('public.privacy_request_events') is null then raise exception 'privacy_request_events missing'; end if;
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='privacy_requests' and column_name='requester_id') then raise exception 'privacy_requests requester_id compatibility column missing'; end if;
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='privacy_requests' and column_name='request_details') then raise exception 'privacy_requests request_details missing'; end if;
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='privacy_requests' and column_name='correction_target') then raise exception 'privacy_requests correction_target missing'; end if;
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='privacy_requests' and column_name='legal_hold') then raise exception 'privacy_requests legal_hold missing'; end if;
   if not (select relrowsecurity from pg_class where oid='public.privacy_requests'::regclass) then raise exception 'privacy_requests RLS missing'; end if;
   if not (select relrowsecurity from pg_class where oid='public.privacy_request_events'::regclass) then raise exception 'privacy_request_events RLS missing'; end if;
 

@@ -8,11 +8,11 @@ The database stores only normalized verification outcomes and hashes needed for 
 
 `start_identity_session` supports only `mock` and `staging` environments. Production completion is intentionally disabled until production credentials, redirect URIs, privacy review and operational approval are in place.
 
-Identity sessions are short-lived and single-active per worker/provider/environment. Starting a new flow expires stale sessions and rejects overlapping live sessions to reduce callback confusion and replay risk. State and nonce values must be supplied as sufficiently long hashes rather than raw secrets.
+Identity sessions are short-lived and single-active per worker/provider/environment. Starting a new flow expires stale sessions and rejects overlapping live sessions to reduce callback confusion and replay risk. State and nonce values must be supplied as sufficiently long hashes rather than raw secrets. The mock/staging contract permits only the `openid` correlation scope; it must not be expanded to retrieve raw MyInfo attributes without a separately reviewed provider contract.
 
 `mark_identity_callback_received_staging`, `fail_identity_session_staging` and `expire_identity_sessions` provide explicit, audited lifecycle transitions. The bulk expiry RPC is intended for service-role scheduling, while Ops/Admin can perform staging operational recovery. Production callback handling remains disabled.
 
-`complete_identity_verification_staging` is an Ops/Admin boundary. It records the identity outcome independently from residency and work eligibility and writes an audit event.
+`complete_identity_verification_staging` is an Ops/Admin boundary. It can complete only an unexpired session that has first entered the audited callback-received state, requires an opaque provider-subject hash, and records identity outcome independently from residency and work eligibility. A residency category cannot be recorded unless residency is verified. It writes an audit event.
 
 ## Worker readiness
 

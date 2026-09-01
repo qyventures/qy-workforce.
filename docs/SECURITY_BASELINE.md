@@ -10,6 +10,7 @@ This document defines non-negotiable launch controls for QY Workforce.
 - Keep identity verification separate from work-eligibility decisions.
 - Provide workflows for access/correction and retention/deletion.
 - Do not retain Singpass tokens or raw identity payloads longer than operationally required.
+- Keep worker-requested identity scopes to the minimum contract; configure any provider-specific attribute retrieval only in the protected staging bridge.
 - Avoid NRIC/full identifier display except where strictly necessary and authorised.
 - Define overseas-transfer controls before using any non-Singapore processor for personal data.
 - Maintain breach-response and notification procedures.

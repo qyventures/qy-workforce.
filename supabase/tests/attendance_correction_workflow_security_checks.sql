@@ -47,4 +47,11 @@ begin
   if pg_get_functiondef('public.review_attendance_correction(uuid,text,text)'::regprocedure) not like '%supervisor_adjustment%' then
     raise exception 'append-only adjustment evidence missing';
   end if;
+
+  if pg_get_functiondef('public.submit_timesheet(uuid)'::regprocedure) not like '%attendance_correction_requests%' then
+    raise exception 'timesheet submission does not consume approved attendance corrections';
+  end if;
+  if pg_get_functiondef('public.submit_timesheet(uuid)'::regprocedure) not like '%status = ''approved''%' then
+    raise exception 'timesheet submission correction approval guard missing';
+  end if;
 end $$;

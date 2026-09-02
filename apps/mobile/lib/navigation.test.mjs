@@ -5,6 +5,7 @@ import { resolveAppRoute } from './navigation.mjs';
 const assignmentId = '123e4567-e89b-42d3-a456-426614174000';
 
 test('allows known worker routes', () => {
+  assert.equal(resolveAppRoute('qyworkforce://onboarding'), '/onboarding');
   assert.equal(resolveAppRoute('qyworkforce://shifts'), '/shifts');
   assert.equal(resolveAppRoute('qyworkforce://earnings'), '/earnings');
 });

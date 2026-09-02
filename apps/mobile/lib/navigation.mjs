@@ -1,5 +1,6 @@
 const ALLOWED_PATHS = new Set([
   '/',
+  '/onboarding',
   '/readiness',
   '/shifts',
   '/my-shifts',

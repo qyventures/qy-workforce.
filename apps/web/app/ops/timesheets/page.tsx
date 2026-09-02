@@ -14,12 +14,26 @@ type QueueRow = {
   exception_label: string;
   submitted_at: string;
 };
+type CorrectionRow = {
+  request_id: string;
+  assignment_id: string;
+  worker_label: string;
+  site_name: string;
+  role_name: string;
+  starts_at: string;
+  ends_at: string;
+  requested_clock_in: string | null;
+  requested_clock_out: string | null;
+  reason: string;
+  requested_at: string;
+};
 
 export default function TimesheetQueue() {
   const [rows, setRows] = useState<QueueRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [corrections, setCorrections] = useState<CorrectionRow[]>([]);
 
   const counts = useMemo(() => ({
     pending: rows.length,
@@ -35,7 +49,11 @@ export default function TimesheetQueue() {
     }
     setLoading(true);
     setMessage('');
-    const { data, error } = await supabase.rpc('get_timesheet_review_queue');
+    const [timesheetResult, correctionResult] = await Promise.all([
+      supabase.rpc('get_timesheet_review_queue'),
+      supabase.rpc('get_attendance_correction_review_queue'),
+    ]);
+    const { data, error } = timesheetResult;
     if (error) {
       setMessage(error.message.includes('JWT') || error.message.includes('authorised')
         ? 'Sign in with an authorised supervisor or Ops account to view the live queue.'
@@ -44,7 +62,31 @@ export default function TimesheetQueue() {
     } else {
       setRows((data ?? []) as QueueRow[]);
     }
+    if (correctionResult.error) {
+      setMessage((current) => current || `Unable to load correction queue: ${correctionResult.error.message}`);
+      setCorrections([]);
+    } else {
+      setCorrections((correctionResult.data ?? []) as CorrectionRow[]);
+    }
     setLoading(false);
+  }
+
+  async function reviewCorrection(id: string, decision: 'approve' | 'reject') {
+    if (!supabase || busyId) return;
+    const note = window.prompt(`${decision === 'approve' ? 'Approval' : 'Rejection'} note (optional; max 1000 characters):`)?.trim() || null;
+    setBusyId(id);
+    setMessage('');
+    const { error } = await supabase.rpc('review_attendance_correction', {
+      p_request_id: id,
+      p_decision: decision,
+      p_review_note: note,
+    });
+    if (error) setMessage(`Correction action failed: ${error.message}`);
+    else {
+      setCorrections((current) => current.filter((row) => row.request_id !== id));
+      setMessage(decision === 'approve' ? 'Attendance correction approved and draft timesheet refreshed.' : 'Attendance correction rejected.');
+    }
+    setBusyId(null);
   }
 
   useEffect(() => { void loadQueue(); }, []);
@@ -124,6 +166,20 @@ export default function TimesheetQueue() {
         )}
       </section>
 
+      <section style={styles.panel}>
+        <div style={styles.panelHeader}><div><h2 style={styles.h2}>Attendance correction requests</h2><p style={styles.panelSub}>Review missing or inaccurate clock events. Approval appends evidence and only refreshes draft/rejected timesheets.</p></div><strong>{corrections.length} pending</strong></div>
+        {corrections.length === 0 ? <p style={styles.empty}>No attendance correction requests are currently visible to this account.</p> : <div style={{ overflowX: 'auto' }}><table style={styles.table}>
+          <thead><tr><th style={styles.th}>Worker</th><th style={styles.th}>Site / shift</th><th style={styles.th}>Requested times</th><th style={styles.th}>Reason</th><th style={styles.th}>Action</th></tr></thead>
+          <tbody>{corrections.map((row) => <tr key={row.request_id}>
+            <td style={styles.strong}>{row.worker_label}</td>
+            <td style={styles.td}>{row.site_name}<div style={styles.muted}>{row.role_name} · {new Date(row.starts_at).toLocaleDateString()}</div></td>
+            <td style={styles.td}><div>In: {row.requested_clock_in ? new Date(row.requested_clock_in).toLocaleString() : 'Unchanged'}</div><div>Out: {row.requested_clock_out ? new Date(row.requested_clock_out).toLocaleString() : 'Unchanged'}</div></td>
+            <td style={styles.td}>{row.reason}</td>
+            <td style={styles.td}><div style={styles.actions}><button disabled={busyId === row.request_id} onClick={() => void reviewCorrection(row.request_id, 'approve')} style={styles.approve}>Approve</button><button disabled={busyId === row.request_id} onClick={() => void reviewCorrection(row.request_id, 'reject')} style={styles.reject}>Reject</button></div></td>
+          </tr>)}</tbody>
+        </table></div>}
+      </section>
+
       <section style={styles.note}>
         <strong>Security:</strong> the queue is generated server-side, worker identifiers are masked, supervisors only receive assigned-site records, approval/rejection is enforced again inside the review RPC, and every decision writes an audit event.
       </section>
@@ -148,4 +204,5 @@ const styles: Record<string, any> = {
   ok: { color: '#027A48', background: '#ECFDF3', borderRadius: 999, padding: '5px 8px', fontWeight: 700 }, warn: { color: '#B54708', background: '#FFFAEB', borderRadius: 999, padding: '5px 8px', fontWeight: 700 },
   actions: { display: 'flex', gap: 7 }, approve: { border: 0, background: '#111827', color: '#fff', padding: '8px 10px', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }, reject: { border: '1px solid #D0D5DD', background: '#fff', color: '#B42318', padding: '8px 10px', borderRadius: 8, fontWeight: 700, cursor: 'pointer' },
   note: { maxWidth: 1140, margin: '14px auto 0', padding: '14px 18px', color: '#667085', fontSize: 12, lineHeight: 1.5 },
+  panelHeader: { display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 16 }, h2: { margin: 0, fontSize: 19 }, panelSub: { margin: '6px 0 0', color: '#667085', fontSize: 13, lineHeight: 1.45 }, muted: { color: '#98A2B3', fontSize: 12, marginTop: 3 },
 };

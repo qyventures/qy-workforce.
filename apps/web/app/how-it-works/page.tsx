@@ -16,7 +16,7 @@ const steps = [
 ];
 
 export default function HowItWorks() {
-  return <main style={{minHeight:'100vh',background:'#0B1220',color:'#fff'}}><SiteHeader />
+  return <main id="main-content" style={{minHeight:'100vh',background:'#0B1220',color:'#fff'}}><SiteHeader />
     <section style={{maxWidth:1050,margin:'0 auto',padding:'72px 24px'}}>
       <div style={{marginTop:42,color:'#8EA2FF',fontWeight:800,fontSize:12,letterSpacing:1.4}}>HOW IT WORKS</div>
       <h1 style={{fontSize:'clamp(38px,6vw,72px)',lineHeight:1.02,letterSpacing:'-.045em',maxWidth:850,margin:'10px 0 18px'}}>Flexible staffing with operational control built in.</h1>
@@ -25,6 +25,7 @@ export default function HowItWorks() {
         {steps.map(([n,t,d])=><article key={n} style={{border:'1px solid #27344A',borderRadius:18,padding:22,background:'#111B2D'}}><div style={{color:'#8EA2FF',fontWeight:900}}>{n}</div><h2 style={{fontSize:19,margin:'24px 0 9px'}}>{t}</h2><p style={{color:'#AAB5C6',lineHeight:1.55,fontSize:14,margin:0}}>{d}</p></article>)}
       </div>
       <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:38}}><Link href="/employers" style={{background:'#fff',color:'#111827',padding:'13px 18px',borderRadius:10,textDecoration:'none',fontWeight:800}}>Hire workers</Link><Link href="/workers" style={{border:'1px solid #3C4A61',color:'#fff',padding:'13px 18px',borderRadius:10,textDecoration:'none',fontWeight:800}}>Find shifts</Link></div>
+      <section aria-labelledby="controls-heading" style={{marginTop:76,borderTop:'1px solid #27344A',paddingTop:42}}><h2 id="controls-heading" style={{fontSize:30,margin:'0 0 14px'}}>Designed for accountable handoffs.</h2><p style={{color:'#B9C2D0',lineHeight:1.65,maxWidth:720}}>Public forms collect only what is needed to start a conversation. Readiness checks, site requirements, attendance exceptions and approvals belong in the relevant service workflow.</p><Link href="/privacy" style={{color:'#fff',fontWeight:750}}>See privacy and data choices →</Link></section>
     </section><SiteFooter /><ConsentBanner />
   </main>
 }

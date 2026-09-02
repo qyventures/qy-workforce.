@@ -40,7 +40,7 @@ export default function EmployersPage() {
     }
   }
 
-  return <main style={{minHeight:'100vh',background:'#F9FAFB'}}>
+  return <main id="main-content" style={{minHeight:'100vh',background:'#F9FAFB'}}>
     <SiteHeader />
     <section style={{maxWidth:1120,margin:'0 auto',padding:'clamp(42px,7vw,76px) 24px',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%, 320px),1fr))',gap:52,alignItems:'start'}}>
       <div><p style={eyebrow}>QY WORKFORCE FOR EMPLOYERS</p><h1 style={{fontSize:'clamp(40px,6vw,66px)',letterSpacing:'-.05em',lineHeight:1.02,margin:'14px 0 18px'}}>Staffing support for the shifts that cannot wait.</h1><p style={{fontSize:18,lineHeight:1.65,color:'#475467',maxWidth:530}}>Tell us the role, site, headcount and timing. We’ll review your request and follow up to clarify the operational details—there is no commitment from this form.</p><div style={{marginTop:30,display:'grid',gap:14}}>{['Share your requirements in a few minutes','Discuss deployment details before any booking','Keep a clear record of site and shift expectations'].map((item) => <div key={item} style={{display:'flex',gap:10,color:'#344054'}}><span aria-hidden="true" style={{color:'#0A0A0A',fontWeight:900}}>✓</span>{item}</div>)}</div><p style={{marginTop:34,fontSize:14,lineHeight:1.55,color:'#667085'}}>Please do not include NRIC, bank, health, or other sensitive personal information in this form.</p></div>
@@ -57,7 +57,7 @@ export default function EmployersPage() {
       <label style={consentStyle}><input required type="checkbox" name="pdpaConsent"/> <span>I consent to QY Workforce using these details to respond to and manage this manpower enquiry, in line with the <a href="/privacy">Privacy Notice</a>.</span></label>
       <label style={consentStyle}><input type="checkbox" name="whatsappConsent"/> <span>I agree to be contacted on WhatsApp about this enquiry, including by an automated qualification assistant. I can ask to stop messages at any time.</span></label>
       <button disabled={state==='sending'} style={buttonStyle}>{state==='sending'?'Submitting…':'Request flexible workers'}</button>
-      {state==='error' && <p role="alert" style={{color:'#B42318',margin:0}}>We could not submit this enquiry. Please check the required fields and try again.</p>}
+      {state==='error' && <p role="alert" aria-live="assertive" style={{color:'#B42318',margin:0}}>We could not submit this enquiry. Please check the required fields and try again.</p>}
     </form></>}</div>
     </section><SiteFooter /><ConsentBanner />
   </main>;

@@ -2,11 +2,19 @@ import Link from 'next/link';
 import { ConsentBanner, ConversionLink, SiteFooter, SiteHeader } from './components/site-shell';
 
 const industries = ['Hospitality', 'F&B', 'Cleaning', 'Retail', 'Promotions', 'Events'];
+const faq = [
+  ['Does an enquiry guarantee workers or a shift?', 'No. An enquiry starts a conversation. Employer requirements, worker eligibility, availability and final arrangements are confirmed separately.'],
+  ['What information should I avoid sharing?', 'Do not include NRIC, bank, health or identity-document details in public forms. We will explain any later onboarding requirements through the appropriate process.'],
+  ['Can I decline WhatsApp follow-up or analytics?', 'Yes. Both are optional. The website and enquiry forms remain available if you decline either choice.'],
+];
 
 export default function HomePage() {
   return (
-    <main style={{ background:'#fff', minHeight:'100vh' }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'Organization', name: 'QY Workforce', url: 'https://qyworkforce.com', description: 'Flexible staffing for Singapore employers and workers.' }) }} />
+    <main id="main-content" style={{ background:'#fff', minHeight:'100vh' }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([
+        { '@context': 'https://schema.org', '@type': 'Organization', name: 'QY Workforce', url: 'https://qyworkforce.com', description: 'Flexible staffing for Singapore employers and workers.' },
+        { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map(([question, answer]) => ({ '@type': 'Question', name: question, acceptedAnswer: { '@type': 'Answer', text: answer } })) },
+      ]) }} />
       <SiteHeader />
       <section style={{background:'#0A0A0A', color:'#fff'}}><div style={{maxWidth:1180, margin:'0 auto', padding:'clamp(62px,10vw,112px) 24px 76px'}}>
         <p style={{letterSpacing:2.4, color:'#C7D0DE', fontSize:12, fontWeight:800}}>FLEXIBLE STAFFING IN SINGAPORE</p>
@@ -38,8 +46,27 @@ export default function HomePage() {
         <p style={{fontSize:18, lineHeight:1.6, color:'#475467', maxWidth:760}}>Register interest in roles that suit you. Verification and onboarding are separate steps before any work opportunity is confirmed.</p>
         <ConversionLink href="/workers" event="home_worker_detail_cta" style={{color:'#101828',fontWeight:750}}>Register interest →</ConversionLink>
       </section>
+      <section aria-labelledby="trust-heading" style={{background:'#F7F8FB',borderTop:'1px solid #EAECF0',borderBottom:'1px solid #EAECF0'}}><div style={{maxWidth:1180,margin:'0 auto',padding:'72px 24px'}}>
+        <p style={{color:'#475467',fontSize:13,fontWeight:800,letterSpacing:1.4}}>READY FOR RESPONSIBLE PILOTS</p>
+        <h2 id="trust-heading" style={{fontSize:42,letterSpacing:'-.04em',margin:'12px 0 16px'}}>Clarity for every side of the shift.</h2>
+        <p style={{fontSize:18,lineHeight:1.6,color:'#475467',maxWidth:760}}>Worker readiness, site expectations, attendance and approvals are treated as operational records—not hidden assumptions.</p>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))',gap:14,marginTop:28}}>
+          {['Consent-led enquiries','No sensitive documents on public forms','Attendance and timesheet visibility','Privacy-safe optional analytics'].map((item)=><div key={item} style={{background:'#fff',border:'1px solid #EAECF0',borderRadius:14,padding:20,fontWeight:750}}>{item}</div>)}
+        </div>
+        <Link href="/privacy" style={{display:'inline-block',marginTop:22,color:'#101828',fontWeight:750}}>Read our privacy approach →</Link>
+      </div></section>
+      <section aria-labelledby="faq-heading" style={{maxWidth:900,margin:'0 auto',padding:'72px 24px'}}>
+        <h2 id="faq-heading" style={{fontSize:36,letterSpacing:'-.035em',margin:'0 0 24px'}}>Questions, answered.</h2>
+        <div style={{display:'grid',gap:18}}>
+          {faq.map(([question, answer]) => <details key={question} style={faqStyle}><summary style={summaryStyle}>{question}</summary><p style={answerStyle}>{answer}</p></details>)}
+        </div>
+      </section>
       <SiteFooter />
       <ConsentBanner />
     </main>
   );
 }
+
+const faqStyle = {borderTop:'1px solid #D0D5DD',padding:'18px 0'};
+const summaryStyle = {cursor:'pointer',fontWeight:750,fontSize:17};
+const answerStyle = {color:'#475467',lineHeight:1.6,maxWidth:720,margin:'12px 0 0'};

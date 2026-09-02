@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 const sectionStyle = { marginTop: 30 };
 
 export default function PrivacyPage() {
-  return <main style={{ minHeight: '100vh', background: '#fff', color: '#101828' }}>
+  return <main id="main-content" style={{ minHeight: '100vh', background: '#fff', color: '#101828' }}>
     <SiteHeader />
     <article style={{ maxWidth: 820, margin: '0 auto', padding: '64px 24px 76px', lineHeight: 1.7 }}>
       <p style={{ letterSpacing: 1.5, fontSize: 12, fontWeight: 800, color: '#475467' }}>QY WORKFORCE</p>

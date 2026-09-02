@@ -9,6 +9,7 @@ const linkStyle = { color: '#475467', textDecoration: 'none', fontWeight: 650, f
 export function SiteHeader() {
   return (
     <header style={{ borderBottom: '1px solid #EAECF0', background: '#fff' }}>
+      <a href="#main-content" style={{ position: 'absolute', left: -9999, top: 8, zIndex: 30, background: '#101828', color: '#fff', padding: '10px 14px', borderRadius: 8 }}>Skip to content</a>
       <nav aria-label="Primary navigation" style={{ maxWidth: 1180, margin: '0 auto', minHeight: 68, padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
         <Link href="/" style={{ color: '#101828', textDecoration: 'none', fontWeight: 850, letterSpacing: '.08em', fontSize: 14 }}>QY WORKFORCE</Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
@@ -38,7 +39,10 @@ export function SiteFooter() {
  * No lead values, identifiers, cookies, or fingerprinting data are collected.
  */
 export function trackConversion(event: string) {
-  if (typeof window === 'undefined' || localStorage.getItem('qy-analytics-consent') !== 'granted') return;
+  if (typeof window === 'undefined') return;
+  let consent: string | null = null;
+  try { consent = localStorage.getItem('qy-analytics-consent'); } catch { return; }
+  if (consent !== 'granted') return;
   const endpoint = process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT;
   if (!endpoint) return;
   const payload = JSON.stringify({ event, path: window.location.pathname, at: new Date().toISOString() });
@@ -51,10 +55,12 @@ export function ConversionLink({ href, event, children, style }: { href: string;
 
 export function ConsentBanner() {
   const [choice, setChoice] = useState<string | null>(null);
-  useEffect(() => setChoice(localStorage.getItem('qy-analytics-consent')), []);
+  useEffect(() => {
+    try { setChoice(localStorage.getItem('qy-analytics-consent')); } catch { setChoice('declined'); }
+  }, []);
   if (choice) return null;
   const choose = (value: 'granted' | 'declined') => {
-    localStorage.setItem('qy-analytics-consent', value);
+    try { localStorage.setItem('qy-analytics-consent', value); } catch { /* The preference still applies for this visit. */ }
     setChoice(value);
   };
   return (

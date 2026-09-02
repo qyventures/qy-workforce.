@@ -90,6 +90,13 @@ create index if not exists privacy_requests_requester_idx on public.privacy_requ
 create index if not exists privacy_requests_queue_idx on public.privacy_requests(status,requested_at);
 create index if not exists privacy_request_events_request_idx on public.privacy_request_events(request_id,created_at);
 
+-- 0017's legacy request RPC stores the subject in worker_id, while this
+-- workflow stores it in requester_id.  Unify both representations for the
+-- open-request invariant so the two RPCs cannot create duplicate workflows.
+create unique index if not exists privacy_requests_one_open_per_requester_type
+  on public.privacy_requests((coalesce(requester_id,worker_id)),request_type)
+  where status in ('submitted','identity_verified','in_review','approved','partially_approved');
+
 alter table public.privacy_requests enable row level security;
 alter table public.privacy_request_events enable row level security;
 

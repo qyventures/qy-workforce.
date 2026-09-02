@@ -28,6 +28,15 @@ begin
      and position('set search_path = public' in lower(v_def))=0 then raise exception 'submit privacy RPC must pin search_path'; end if;
   if position('open request of this type already exists' in v_def)=0 then raise exception 'duplicate-open-request guard missing'; end if;
 
+  if not exists (
+    select 1
+    from pg_indexes
+    where schemaname='public'
+      and tablename='privacy_requests'
+      and indexname='privacy_requests_one_open_per_requester_type'
+      and indexdef ilike '%coalesce(requester_id, worker_id)%'
+  ) then raise exception 'cross-version duplicate-open-request index missing'; end if;
+
   select pg_get_functiondef(p.oid) into v_def
     from pg_proc p join pg_namespace n on n.oid=p.pronamespace
    where n.nspname='public' and p.proname='admin_transition_privacy_request';

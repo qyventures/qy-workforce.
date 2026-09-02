@@ -10,7 +10,14 @@ function requireFile(relativePath) {
   if (!existsSync(join(root, relativePath))) failures.push(`Missing ${relativePath}`);
 }
 
-for (const file of ['apps/mobile/.env.example', 'apps/web/.env.example', 'apps/mobile/eas.json', 'docs/STAGING_RELEASE_CHECKLIST.md']) {
+for (const file of [
+  'apps/mobile/.env.example',
+  'apps/web/.env.example',
+  'apps/mobile/eas.json',
+  'docs/STAGING_RELEASE_CHECKLIST.md',
+  'scripts/release/run-staging-seed.sh',
+  'supabase/seed/staging.sql',
+]) {
   requireFile(file);
 }
 
@@ -35,6 +42,12 @@ for (const migration of migrations) {
 
 if (migrations.length === 0) failures.push('No Supabase migrations found');
 
+const testsDirectory = join(root, 'supabase/tests');
+const tests = existsSync(testsDirectory)
+  ? readdirSync(testsDirectory).filter((file) => file.endsWith('.sql')).sort()
+  : [];
+if (tests.length === 0) failures.push('No Supabase regression checks found');
+
 if (existsSync(join(root, 'apps/mobile/eas.json'))) {
   const eas = JSON.parse(readFileSync(join(root, 'apps/mobile/eas.json'), 'utf8'));
   const preview = eas.build?.preview;
@@ -50,5 +63,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(`Release readiness check passed (${migrations.length} ordered migrations).`);
+  console.log(`Release readiness check passed (${migrations.length} ordered migrations, ${tests.length} SQL checks).`);
 }

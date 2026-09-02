@@ -1,0 +1,99 @@
+import Link from 'next/link';
+import { ConsentBanner, SiteFooter, SiteHeader } from './components/site-shell';
+
+const industries = [
+  ['Hospitality','Hotels, banquets and guest services','https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=700&q=82'],
+  ['F&B','Cafes, restaurants and catering','https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=700&q=82'],
+  ['Cleaning','Commercial and hospitality cleaning','https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=700&q=82'],
+  ['Retail','Shops, malls and customer service','https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=700&q=82'],
+  ['Promotions','Roadshows and brand activations','https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=700&q=82'],
+  ['Events','Conferences, registration and event crew','https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=700&q=82'],
+];
+
+const trust = [
+  ['✓','Verified readiness','Eligibility and onboarding checks before deployment.'],
+  ['⚡','Fill shifts faster','Structured requests and matching reduce manual coordination.'],
+  ['◷','Attendance visibility','Operational workflows support clock-in and timesheet visibility.'],
+  ['◉','Human support','Escalation remains available when a shift needs attention.'],
+];
+
+const steps = [
+  ['01','Tell us what you need','Role, location, shift timing and headcount.'],
+  ['02','Match suitable workers','Eligible workers are matched to operational requirements.'],
+  ['03','Run the shift','Attendance and exceptions are managed in one workflow.'],
+  ['04','Approve and reconcile','Timesheets move towards payroll and client reporting.'],
+];
+
+export default function HomePage() {
+  return (
+    <main style={{background:'#fff',minHeight:'100vh',color:'#101828'}}>
+      <SiteHeader />
+
+      <section style={{background:'#07111f',color:'#fff',overflow:'hidden'}}>
+        <div style={{maxWidth:1280,margin:'0 auto',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(360px,1fr))',alignItems:'stretch'}}>
+          <div style={{padding:'clamp(60px,8vw,104px) 32px 72px',position:'relative',zIndex:2}}>
+            <p style={{letterSpacing:2.5,color:'#86A9FF',fontSize:12,fontWeight:850,margin:0}}>FLEXIBLE STAFFING IN SINGAPORE</p>
+            <h1 style={{fontSize:'clamp(46px,6vw,78px)',letterSpacing:'-.055em',lineHeight:.98,margin:'20px 0 24px',maxWidth:700}}>Flexible manpower.<br/>Clearer operations.</h1>
+            <p style={{fontSize:'clamp(17px,2vw,20px)',lineHeight:1.58,maxWidth:640,color:'#D0D9E8',margin:0}}>For employers who need reliable casual manpower and workers looking for flexible shifts with clear expectations.</p>
+            <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:32}}>
+              <Link href="/employers" style={{background:'#fff',color:'#07111f',padding:'15px 22px',borderRadius:10,textDecoration:'none',fontWeight:800}}>Hire workers</Link>
+              <Link href="/workers" style={{background:'#365CF5',color:'#fff',padding:'15px 22px',borderRadius:10,textDecoration:'none',fontWeight:800}}>Find shifts</Link>
+              <Link href="/how-it-works" style={{border:'1px solid #65748B',color:'#fff',padding:'15px 22px',borderRadius:10,textDecoration:'none',fontWeight:700}}>How it works →</Link>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:12,marginTop:42,maxWidth:620}}>
+              {trust.slice(0,2).map(([icon,title,copy])=><div key={title} style={{borderTop:'1px solid #2A3A52',paddingTop:16}}><div style={{fontSize:21,color:'#86A9FF'}}>{icon}</div><strong style={{display:'block',marginTop:7}}>{title}</strong><span style={{fontSize:13,color:'#AEBBD0',lineHeight:1.45}}>{copy}</span></div>)}
+            </div>
+          </div>
+          <div style={{minHeight:560,position:'relative'}}>
+            <img src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1400&q=86" alt="Team of people working together" style={{width:'100%',height:'100%',minHeight:560,objectFit:'cover',objectPosition:'center'}} />
+            <div style={{position:'absolute',inset:0,background:'linear-gradient(90deg,#07111f 0%,rgba(7,17,31,.55) 18%,rgba(7,17,31,.04) 58%)'}} />
+            <div style={{position:'absolute',right:26,bottom:28,maxWidth:290,background:'rgba(255,255,255,.96)',color:'#101828',padding:22,borderRadius:16,boxShadow:'0 18px 40px rgba(0,0,0,.2)'}}>
+              <div style={{fontSize:12,fontWeight:850,color:'#365CF5',letterSpacing:1}}>FOR OPERATIONS TEAMS</div>
+              <div style={{fontSize:22,fontWeight:850,lineHeight:1.18,marginTop:8}}>One place to request, match and track flexible manpower.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section style={{borderBottom:'1px solid #E7EAF0',background:'#fff'}}>
+        <div style={{maxWidth:1240,margin:'0 auto',padding:'24px 28px',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))',gap:12}}>
+          {trust.map(([icon,title,copy])=><div key={title} style={{display:'grid',gridTemplateColumns:'42px 1fr',gap:10,alignItems:'start',padding:'10px 8px'}}><div style={{width:38,height:38,borderRadius:12,display:'grid',placeItems:'center',background:'#EEF3FF',color:'#3155D9',fontWeight:900,fontSize:19}}>{icon}</div><div><strong style={{fontSize:14}}>{title}</strong><div style={{fontSize:12.5,lineHeight:1.45,color:'#667085',marginTop:3}}>{copy}</div></div></div>)}
+        </div>
+      </section>
+
+      <section style={{maxWidth:1240,margin:'0 auto',padding:'74px 28px 54px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',gap:24,alignItems:'end',flexWrap:'wrap',marginBottom:26}}>
+          <div><p style={{color:'#365CF5',fontSize:12,fontWeight:850,letterSpacing:1.6,margin:'0 0 8px'}}>INDUSTRIES WE SUPPORT</p><h2 style={{fontSize:'clamp(32px,4vw,48px)',letterSpacing:'-.035em',margin:0,maxWidth:620}}>People for the moments your operation needs them.</h2></div>
+          <Link href="/industries" style={{color:'#2449CA',fontWeight:800,textDecoration:'none'}}>Explore all industries →</Link>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:14}}>
+          {industries.map(([name,copy,img])=><article key={name} style={{overflow:'hidden',border:'1px solid #E4E7EC',borderRadius:16,background:'#fff',boxShadow:'0 6px 24px rgba(16,24,40,.04)'}}><img src={img} alt={`${name} workforce`} loading="lazy" style={{display:'block',width:'100%',height:150,objectFit:'cover'}}/><div style={{padding:17}}><strong style={{fontSize:17}}>{name}</strong><p style={{fontSize:13.5,lineHeight:1.48,color:'#667085',margin:'7px 0 0'}}>{copy}</p></div></article>)}
+        </div>
+      </section>
+
+      <section style={{background:'#F5F8FF'}}>
+        <div style={{maxWidth:1240,margin:'0 auto',padding:'70px 28px'}}>
+          <p style={{color:'#365CF5',fontSize:12,fontWeight:850,letterSpacing:1.6,margin:'0 0 8px'}}>HOW IT WORKS</p>
+          <h2 style={{fontSize:'clamp(32px,4vw,48px)',letterSpacing:'-.035em',margin:'0 0 30px'}}>From manpower request to completed shift.</h2>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(230px,1fr))',gap:14}}>
+            {steps.map(([n,title,copy])=><div key={n} style={{background:'#fff',border:'1px solid #DFE6F5',borderRadius:17,padding:24,minHeight:165}}><div style={{fontSize:12,fontWeight:900,color:'#365CF5'}}>{n}</div><h3 style={{fontSize:20,margin:'20px 0 8px'}}>{title}</h3><p style={{color:'#667085',fontSize:14,lineHeight:1.55,margin:0}}>{copy}</p></div>)}
+          </div>
+        </div>
+      </section>
+
+      <section style={{maxWidth:1240,margin:'0 auto',padding:'70px 28px 82px',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))',gap:18}}>
+        <div style={{borderRadius:22,overflow:'hidden',background:'#0B1830',color:'#fff',display:'grid',gridTemplateColumns:'minmax(0,1.15fr) minmax(160px,.85fr)',minHeight:330}}>
+          <div style={{padding:'38px 34px'}}><p style={{color:'#8EAAFF',fontSize:12,fontWeight:850,letterSpacing:1.4}}>FOR EMPLOYERS</p><h2 style={{fontSize:34,lineHeight:1.05,margin:'12px 0 16px'}}>Get reliable manpower when you need it.</h2><p style={{color:'#C8D2E1',lineHeight:1.58}}>Share your staffing requirement and keep fulfilment, attendance and approvals visible.</p><Link href="/employers" style={{display:'inline-block',marginTop:16,background:'#fff',color:'#0B1830',padding:'13px 18px',borderRadius:9,textDecoration:'none',fontWeight:800}}>Request manpower</Link></div>
+          <img src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=700&q=82" alt="Employer discussing staffing" loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+        </div>
+        <div style={{borderRadius:22,overflow:'hidden',background:'#EAF7EE',display:'grid',gridTemplateColumns:'minmax(0,1.15fr) minmax(160px,.85fr)',minHeight:330}}>
+          <div style={{padding:'38px 34px'}}><p style={{color:'#177245',fontSize:12,fontWeight:850,letterSpacing:1.4}}>FOR WORKERS</p><h2 style={{fontSize:34,lineHeight:1.05,margin:'12px 0 16px'}}>Find flexible shifts that fit your schedule.</h2><p style={{color:'#466353',lineHeight:1.58}}>Register your interests and availability. Onboarding and eligibility checks happen before deployment.</p><Link href="/workers" style={{display:'inline-block',marginTop:16,background:'#176B43',color:'#fff',padding:'13px 18px',borderRadius:9,textDecoration:'none',fontWeight:800}}>Find shifts</Link></div>
+          <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=700&q=82" alt="Worker looking for flexible shifts" loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+        </div>
+      </section>
+
+      <SiteFooter />
+      <ConsentBanner />
+    </main>
+  );
+}

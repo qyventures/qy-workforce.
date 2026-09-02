@@ -22,6 +22,8 @@ Deployability remains server-authoritative. Worker clients may express role inte
 
 Operational consent is an append-only decision history. `worker_has_active_consent(...)` uses only the latest decision for each purpose, so a withdrawal immediately takes effect and an old grant cannot keep a worker deployable or start an identity session. Direct consent writes are denied; workers use `set_worker_operational_consent(...)`, which validates the purpose and policy version and emits a minimised audit event. The worker shift feed checks both live prerequisites and the separate Ops-managed `status='deployable'` gate; it must not advertise shifts that acceptance will reject.
 
+Worker document uploads store metadata and a worker-scoped object key only. Raw files must remain in a private storage bucket and be served through short-lived signed URLs; keys cannot be URLs, traversal paths or cross-worker paths. Workers cannot choose document retention. Ops/Admin or a service-role retention job assigns a future retention deadline through `set_worker_document_retention(...)`, with an audit event. This keeps document retention policy separate from worker-submitted identity, residency and work-eligibility facts.
+
 ## Shift demand lifecycle
 
 Demand creation is server-authoritative. `clients`, `sites`, `roles` and `shifts` have RLS enabled, and anonymous/authenticated clients have no direct INSERT/UPDATE/DELETE privileges on those tables.

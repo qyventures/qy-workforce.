@@ -33,6 +33,8 @@ This document defines non-negotiable launch controls for QY Workforce.
 - No secrets or personal data in application logs.
 - Tamper-evident audit records for identity, eligibility, assignment, time and payroll changes.
 - GPS values collected only for shift attendance purposes and with defined retention.
+- Worker-uploaded documents remain in private object storage; database metadata contains only worker-scoped keys, and access uses short-lived signed URLs.
+- Document retention deadlines are assigned by privileged operations/retention jobs, never by worker-submitted payloads.
 
 ## Secrets / cryptography
 

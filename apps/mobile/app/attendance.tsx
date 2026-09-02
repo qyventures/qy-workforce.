@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import { isLikelyNetworkError, mobileErrorMessage } from '../lib/errors';
@@ -24,6 +24,13 @@ type AttendanceDetails = {
     worker_amount: number | null;
     submitted_at: string | null;
   } | null;
+  correction?: {
+    id: string;
+    status: string;
+    reason: string;
+    requested_clock_in: string | null;
+    requested_clock_out: string | null;
+  } | null;
 };
 
 const demo: AttendanceDetails = {
@@ -41,6 +48,11 @@ export default function AttendanceScreen() {
   const [refreshingState, setRefreshingState] = useState(false);
   const [distanceM, setDistanceM] = useState<number | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [correctionReason, setCorrectionReason] = useState('');
+  const [correctionIn, setCorrectionIn] = useState('');
+  const [correctionOut, setCorrectionOut] = useState('');
+  const [showCorrection, setShowCorrection] = useState(false);
+  const [submittingCorrection, setSubmittingCorrection] = useState(false);
 
   async function load(asRefresh = false) {
     if (asRefresh) setRefreshingState(true); else setLoading(true);
@@ -56,6 +68,14 @@ export default function AttendanceScreen() {
       if (error) throw error;
       if (!data) throw new Error('This assignment is not available.');
       const next = data as AttendanceDetails;
+      const { data: correction } = await supabase
+        .from('attendance_correction_requests')
+        .select('id,status,reason,requested_clock_in,requested_clock_out')
+        .eq('assignment_id', assignmentId)
+        .order('requested_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      next.correction = correction as AttendanceDetails['correction'];
       setDetails(next);
       setState(next.clock_out_at ? 'clocked-out' : next.clock_in_at ? 'clocked-in' : 'idle');
     } catch (error) {
@@ -66,6 +86,39 @@ export default function AttendanceScreen() {
   }
 
   useEffect(() => { void load(); }, [assignmentId]);
+
+  async function submitCorrection() {
+    if (!supabase || !details || submittingCorrection) return;
+    if (correctionReason.trim().length < 5) {
+      Alert.alert('Reason required', 'Tell operations what was wrong with the attendance record (at least 5 characters).');
+      return;
+    }
+    if (!correctionIn.trim() && !correctionOut.trim()) {
+      Alert.alert('Timestamp required', 'Enter at least one corrected clock-in or clock-out time.');
+      return;
+    }
+    const parsedIn = correctionIn.trim() ? new Date(correctionIn.trim()) : null;
+    const parsedOut = correctionOut.trim() ? new Date(correctionOut.trim()) : null;
+    if ((parsedIn && Number.isNaN(parsedIn.getTime())) || (parsedOut && Number.isNaN(parsedOut.getTime()))) {
+      Alert.alert('Invalid timestamp', 'Use an ISO date/time such as 2026-09-02T09:00:00+08:00.');
+      return;
+    }
+    setSubmittingCorrection(true); setLoadError(null);
+    const { error } = await supabase.rpc('request_attendance_correction', {
+      p_assignment_id: details.assignment_id,
+      p_requested_clock_in: parsedIn ? parsedIn.toISOString() : null,
+      p_requested_clock_out: parsedOut ? parsedOut.toISOString() : null,
+      p_reason: correctionReason.trim(),
+    });
+    if (error) {
+      setLoadError(error.message);
+    } else {
+      setShowCorrection(false); setCorrectionReason(''); setCorrectionIn(''); setCorrectionOut('');
+      Alert.alert('Request submitted', 'Operations will review your attendance correction before payroll.');
+      await load(true);
+    }
+    setSubmittingCorrection(false);
+  }
 
   const verifyAndRecord = async (action: 'in' | 'out') => {
     if (!details) return;
@@ -155,6 +208,16 @@ export default function AttendanceScreen() {
     {loadError && <View style={styles.warningCard} accessibilityRole="alert"><Text style={styles.warningTitle}>Check server status before retrying</Text><Text style={styles.warningBody}>{loadError}</Text><Pressable accessibilityRole="button" accessibilityState={{ disabled: refreshingState }} style={[styles.warningButton, refreshingState && styles.disabledButton]} disabled={refreshingState} onPress={() => void load(true)}><Text style={styles.warningButtonText}>{refreshingState ? 'Refreshing status…' : 'Refresh attendance status'}</Text></Pressable></View>}
     <View style={styles.timeCard}><Text style={styles.date}>{shiftDate}</Text><Text style={styles.status}>{isWorking ? 'You are clocked in' : state === 'clocked-out' ? 'Shift completed' : 'Ready to clock in'}</Text>{details.clock_in_at && <Text style={styles.distance}>Clocked in: {new Date(details.clock_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>}{details.clock_out_at && <Text style={styles.distance}>Clocked out: {new Date(details.clock_out_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>}{distanceM !== null && <Text style={styles.distance}>Last verified worksite distance: {distanceM}m</Text>}</View>
     <View style={styles.privacyCard}><Text style={styles.privacyTitle}>Location privacy</Text><Text style={styles.privacyBody}>Location is requested only when you tap clock in or clock out. QY Workforce does not continuously track your location in the background.</Text></View>
+    {details.correction?.status === 'pending' && <View style={styles.pendingCard}><Text style={styles.pendingTitle}>Correction request pending</Text><Text style={styles.pendingBody}>Operations is reviewing: {details.correction.reason}</Text></View>}
+    {!details.correction || details.correction.status !== 'pending' ? <Pressable accessibilityRole="button" style={styles.secondaryNeutralButton} onPress={() => { setCorrectionIn(details.clock_in_at ?? ''); setCorrectionOut(details.clock_out_at ?? ''); setShowCorrection(true); }}><Text style={styles.secondaryNeutralButtonText}>Report an attendance issue</Text></Pressable> : null}
+    {showCorrection && <View style={styles.correctionCard}>
+      <Text style={styles.correctionTitle}>Request attendance correction</Text>
+      <Text style={styles.correctionHelp}>Use ISO date/time, for example 2026-09-02T09:00:00+08:00. Leave a field blank if that timestamp is correct or was not recorded.</Text>
+      <TextInput accessibilityLabel="Corrected clock-in time" value={correctionIn} onChangeText={setCorrectionIn} placeholder="Corrected clock-in (optional)" style={styles.input} autoCapitalize="none" />
+      <TextInput accessibilityLabel="Corrected clock-out time" value={correctionOut} onChangeText={setCorrectionOut} placeholder="Corrected clock-out (optional)" style={styles.input} autoCapitalize="none" />
+      <TextInput accessibilityLabel="Attendance issue reason" value={correctionReason} onChangeText={setCorrectionReason} placeholder="What went wrong?" style={[styles.input, styles.reasonInput]} multiline maxLength={1000} />
+      <View style={styles.correctionActions}><Pressable accessibilityRole="button" style={styles.secondaryNeutralButton} onPress={() => setShowCorrection(false)}><Text style={styles.secondaryNeutralButtonText}>Cancel</Text></Pressable><Pressable accessibilityRole="button" style={[styles.primaryButton, submittingCorrection && styles.disabledButton]} disabled={submittingCorrection} onPress={() => void submitCorrection()}><Text style={styles.primaryButtonText}>{submittingCorrection ? 'Submitting…' : 'Submit request'}</Text></Pressable></View>
+    </View>}
     {state !== 'clocked-out' && <Pressable accessibilityRole="button" accessibilityLabel={isWorking ? 'Verify location and clock out' : 'Verify location and clock in'} accessibilityState={{ disabled: state === 'locating' || refreshingState || Boolean(loadError) }} disabled={state === 'locating' || refreshingState || Boolean(loadError)} style={[styles.primaryButton, isWorking && styles.outButton, (state === 'locating' || refreshingState || Boolean(loadError)) && styles.disabledButton]} onPress={() => verifyAndRecord(isWorking ? 'out' : 'in')}><Text style={styles.primaryButtonText}>{state === 'locating' ? 'Verifying location…' : isWorking ? 'Verify location & clock out' : 'Verify location & clock in'}</Text></Pressable>}
     {state === 'clocked-out' && <View style={styles.completeCard}><Text style={styles.completeTitle}>Attendance captured</Text><Text style={styles.completeBody}>{details.timesheet ? `${Math.floor(details.timesheet.payable_minutes / 60)}h ${details.timesheet.payable_minutes % 60}m recorded · Est. S$${Number(details.timesheet.worker_amount ?? 0).toFixed(2)} · ${details.timesheet.status}` : 'A draft timesheet is being prepared.'}</Text><Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={() => router.replace('/my-shifts')}><Text style={styles.secondaryButtonText}>View My Shifts</Text></Pressable></View>}
     <Text style={styles.note}>The server validates worksite geofence, GPS accuracy, event order and shift timing before accepting attendance. Supervisor approval is still required before payroll.</Text>
@@ -162,5 +225,5 @@ export default function AttendanceScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, padding: 24, paddingTop: 68, backgroundColor: '#F7F8FC' }, center: { flex: 1, padding: 24, alignItems: 'center', justifyContent: 'center', gap: 14, backgroundColor: '#F7F8FC' }, eyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 1.2, color: '#4D63FF' }, title: { fontSize: 32, lineHeight: 38, fontWeight: '800', color: '#101828', marginTop: 5 }, client: { fontSize: 16, color: '#667085', marginTop: 6 }, timeCard: { backgroundColor: '#111827', borderRadius: 22, padding: 22, marginTop: 28 }, date: { color: '#D0D5DD', fontSize: 15, fontWeight: '600' }, status: { color: '#FFFFFF', fontSize: 24, lineHeight: 30, fontWeight: '800', marginTop: 12 }, distance: { color: '#C7D2FE', fontSize: 13, marginTop: 10 }, privacyCard: { backgroundColor: '#EEF4FF', borderRadius: 18, padding: 18, marginTop: 18 }, privacyTitle: { color: '#3538CD', fontWeight: '800', fontSize: 16 }, privacyBody: { color: '#475467', marginTop: 7, lineHeight: 20 }, warningCard: { backgroundColor: '#FFF7ED', borderRadius: 18, padding: 16, marginTop: 18, borderWidth: 1, borderColor: '#FED7AA' }, warningTitle: { color: '#9A3412', fontWeight: '800', fontSize: 15 }, warningBody: { color: '#7C2D12', marginTop: 6, lineHeight: 20 }, warningButton: { borderWidth: 1, borderColor: '#FDBA74', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 12 }, warningButtonText: { color: '#9A3412', fontWeight: '800' }, primaryButton: { backgroundColor: '#4D63FF', borderRadius: 16, paddingVertical: 17, paddingHorizontal: 18, alignItems: 'center', marginTop: 22, minHeight: 52, justifyContent: 'center' }, outButton: { backgroundColor: '#B42318' }, disabledButton: { opacity: 0.55 }, primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' }, completeCard: { backgroundColor: '#ECFDF3', borderRadius: 18, padding: 18, marginTop: 22 }, completeTitle: { color: '#027A48', fontSize: 18, fontWeight: '800' }, completeBody: { color: '#475467', lineHeight: 20, marginTop: 6 }, secondaryButton: { borderWidth: 1, borderColor: '#A6F4C5', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 14, minHeight: 48, justifyContent: 'center' }, secondaryButtonText: { color: '#027A48', fontWeight: '800' }, secondaryNeutralButton: { borderWidth: 1, borderColor: '#D0D5DD', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18, minHeight: 48, justifyContent: 'center' }, secondaryNeutralButtonText: { color: '#344054', fontWeight: '800' }, errorText: { color: '#B42318', textAlign: 'center', lineHeight: 20 }, note: { color: '#98A2B3', fontSize: 12, lineHeight: 18, marginTop: 18 },
+  page: { flex: 1, padding: 24, paddingTop: 68, backgroundColor: '#F7F8FC' }, center: { flex: 1, padding: 24, alignItems: 'center', justifyContent: 'center', gap: 14, backgroundColor: '#F7F8FC' }, eyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 1.2, color: '#4D63FF' }, title: { fontSize: 32, lineHeight: 38, fontWeight: '800', color: '#101828', marginTop: 5 }, client: { fontSize: 16, color: '#667085', marginTop: 6 }, timeCard: { backgroundColor: '#111827', borderRadius: 22, padding: 22, marginTop: 28 }, date: { color: '#D0D5DD', fontSize: 15, fontWeight: '600' }, status: { color: '#FFFFFF', fontSize: 24, lineHeight: 30, fontWeight: '800', marginTop: 12 }, distance: { color: '#C7D2FE', fontSize: 13, marginTop: 10 }, privacyCard: { backgroundColor: '#EEF4FF', borderRadius: 18, padding: 18, marginTop: 18 }, privacyTitle: { color: '#3538CD', fontWeight: '800', fontSize: 16 }, privacyBody: { color: '#475467', marginTop: 7, lineHeight: 20 }, pendingCard: { backgroundColor: '#FFF7ED', borderRadius: 18, padding: 18, marginTop: 18 }, pendingTitle: { color: '#9A3412', fontWeight: '800', fontSize: 16 }, pendingBody: { color: '#7C2D12', lineHeight: 20, marginTop: 6 }, correctionCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 18, marginTop: 18, borderWidth: 1, borderColor: '#D0D5DD', gap: 10 }, correctionTitle: { fontSize: 18, fontWeight: '800' }, correctionHelp: { color: '#68707B', lineHeight: 19, fontSize: 13 }, input: { borderWidth: 1, borderColor: '#D0D5DD', borderRadius: 10, padding: 12, minHeight: 46, backgroundColor: '#FFFFFF' }, reasonInput: { minHeight: 84, textAlignVertical: 'top' }, correctionActions: { flexDirection: 'row', gap: 10, alignItems: 'center' }, warningCard: { backgroundColor: '#FFF7ED', borderRadius: 18, padding: 16, marginTop: 18, borderWidth: 1, borderColor: '#FED7AA' }, warningTitle: { color: '#9A3412', fontWeight: '800', fontSize: 15 }, warningBody: { color: '#7C2D12', marginTop: 6, lineHeight: 20 }, warningButton: { borderWidth: 1, borderColor: '#FDBA74', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 12 }, warningButtonText: { color: '#9A3412', fontWeight: '800' }, primaryButton: { backgroundColor: '#4D63FF', borderRadius: 16, paddingVertical: 17, paddingHorizontal: 18, alignItems: 'center', marginTop: 22, minHeight: 52, justifyContent: 'center' }, outButton: { backgroundColor: '#B42318' }, disabledButton: { opacity: 0.55 }, primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' }, completeCard: { backgroundColor: '#ECFDF3', borderRadius: 18, padding: 18, marginTop: 22 }, completeTitle: { color: '#027A48', fontSize: 18, fontWeight: '800' }, completeBody: { color: '#475467', lineHeight: 20, marginTop: 6 }, secondaryButton: { borderWidth: 1, borderColor: '#A6F4C5', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 14, minHeight: 48, justifyContent: 'center' }, secondaryButtonText: { color: '#027A48', fontWeight: '800' }, secondaryNeutralButton: { borderWidth: 1, borderColor: '#D0D5DD', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18, minHeight: 48, justifyContent: 'center' }, secondaryNeutralButtonText: { color: '#344054', fontWeight: '800' }, errorText: { color: '#B42318', textAlign: 'center', lineHeight: 20 }, note: { color: '#98A2B3', fontSize: 12, lineHeight: 18, marginTop: 18 },
 });

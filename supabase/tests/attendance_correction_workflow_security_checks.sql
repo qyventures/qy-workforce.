@@ -25,6 +25,15 @@ begin
   if not has_function_privilege('authenticated','public.cancel_own_attendance_correction(uuid)','EXECUTE') then
     raise exception 'cancel correction RPC not executable';
   end if;
+  if not has_function_privilege('authenticated','public.get_attendance_correction_review_queue()','EXECUTE') then
+    raise exception 'correction review queue RPC not executable';
+  end if;
+  if pg_get_functiondef('public.get_attendance_correction_review_queue()'::regprocedure) not like '%supervisor_sites%' then
+    raise exception 'correction review queue site scope missing';
+  end if;
+  if pg_get_functiondef('public.get_attendance_correction_review_queue()'::regprocedure) not like '%Worker #%' then
+    raise exception 'correction review queue worker masking missing';
+  end if;
 
   if pg_get_functiondef('public.review_attendance_correction(uuid,text,text)'::regprocedure) not like '%requester cannot review own request%' then
     raise exception 'separation-of-duties guard missing';

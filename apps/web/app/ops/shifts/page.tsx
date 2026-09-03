@@ -269,7 +269,7 @@ export default function ShiftsPage() {
         </div>
       </header>
 
-      <section style={styles.createPanel} aria-labelledby="create-shift-title">
+      <section id="create-shift" style={styles.createPanel} aria-labelledby="create-shift-title">
         <div style={styles.createHeading}>
           <div><h2 id="create-shift-title" style={styles.h2}>Create shift</h2><p style={styles.createSub}>Save privately as a draft or publish immediately to eligible workers.</p></div>
           <span style={styles.controlNote}>Ops only · audited server actions</span>

@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 const metrics = [
   { label: 'Open shifts', value: '42', sub: '11 starting today' },
   { label: 'Fill rate', value: '91%', sub: '+4.2 pts this week' },
@@ -24,14 +26,14 @@ export default function OpsDashboard() {
       <aside style={styles.sidebar}>
         <div style={styles.brand}>QY <span style={{ opacity: 0.62 }}>Workforce</span></div>
         <nav style={styles.nav}>
-          <a style={styles.navActive}>Overview</a>
-          <a style={styles.navItem}>Shifts</a>
-          <a style={styles.navItem}>Workers</a>
-          <a style={styles.navItem}>Clients & sites</a>
-          <a style={styles.navItem}>Timesheets</a>
-          <a style={styles.navItem}>Payroll export</a>
-          <a style={styles.navItem}>Reports</a>
-          <a style={styles.navItem}>Audit & compliance</a>
+          <Link href="/ops" style={styles.navActive}>Overview</Link>
+          <Link href="/ops/shifts" style={styles.navItem}>Shifts</Link>
+          <Link href="/ops/workers" style={styles.navItem}>Workers</Link>
+          <Link href="/ops/clients" style={styles.navItem}>Clients & sites</Link>
+          <Link href="/ops/timesheets" style={styles.navItem}>Timesheets</Link>
+          <Link href="/ops/payroll" style={styles.navItem}>Payroll export</Link>
+          <Link href="/ops/planning" style={styles.navItem}>Reports</Link>
+          <Link href="/ops/exceptions" style={styles.navItem}>Audit & compliance</Link>
         </nav>
       </aside>
 
@@ -42,7 +44,7 @@ export default function OpsDashboard() {
             <h1 style={styles.h1}>Workforce command centre</h1>
             <p style={styles.subtitle}>Live staffing, attendance exceptions, approvals and margin visibility.</p>
           </div>
-          <button style={styles.primaryButton}>Create shift</button>
+          <Link href="/ops/shifts#create-shift" style={styles.primaryButton}>Create shift</Link>
         </header>
 
         <div style={styles.metricGrid}>
@@ -62,7 +64,7 @@ export default function OpsDashboard() {
                 <div style={styles.panelTitle}>Active sites</div>
                 <div style={styles.panelSub}>Current fill and estimated gross margin</div>
               </div>
-              <button style={styles.ghostButton}>View all</button>
+              <Link href="/ops/clients" style={styles.ghostButton}>View all</Link>
             </div>
 
             <div style={{ overflowX: 'auto' }}>
@@ -102,7 +104,7 @@ export default function OpsDashboard() {
                 </div>
               ))}
             </div>
-            <button style={{ ...styles.ghostButton, width: '100%', marginTop: 18 }}>Review exceptions</button>
+            <Link href="/ops/exceptions" style={{ ...styles.ghostButton, width: '100%', marginTop: 18 }}>Review exceptions</Link>
           </aside>
         </div>
 
@@ -112,7 +114,7 @@ export default function OpsDashboard() {
               <div style={styles.panelTitle}>Approval queue</div>
               <div style={styles.panelSub}>19 timesheets pending supervisor or operations approval</div>
             </div>
-            <button style={styles.ghostButton}>Open queue</button>
+            <Link href="/ops/timesheets" style={styles.ghostButton}>Open queue</Link>
           </div>
           <div style={styles.approvalStrip}>
             <div><strong>12</strong><span> clean matches</span></div>
@@ -139,7 +141,7 @@ const styles: Record<string, any> = {
   eyebrow: { fontSize: 12, letterSpacing: 1.3, fontWeight: 800, color: '#4D63FF' },
   h1: { fontSize: 32, lineHeight: 1.15, margin: '5px 0 7px', letterSpacing: '-0.03em' },
   subtitle: { color: '#667085', margin: 0, fontSize: 15 },
-  primaryButton: { border: 0, borderRadius: 12, background: '#111827', color: '#fff', padding: '12px 17px', fontWeight: 750, cursor: 'pointer' },
+  primaryButton: { border: 0, borderRadius: 12, background: '#111827', color: '#fff', padding: '12px 17px', fontWeight: 750, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' },
   metricGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 14, marginBottom: 16 },
   metricCard: { background: '#fff', borderRadius: 16, padding: 18, border: '1px solid #E8ECF2' },
   metricLabel: { color: '#667085', fontSize: 13, fontWeight: 650 },
@@ -150,7 +152,7 @@ const styles: Record<string, any> = {
   panelHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 },
   panelTitle: { fontSize: 17, fontWeight: 800 },
   panelSub: { color: '#98A2B3', fontSize: 12, marginTop: 4 },
-  ghostButton: { border: '1px solid #D7DCE4', background: '#fff', borderRadius: 10, padding: '9px 12px', color: '#344054', fontWeight: 700, cursor: 'pointer' },
+  ghostButton: { border: '1px solid #D7DCE4', background: '#fff', borderRadius: 10, padding: '9px 12px', color: '#344054', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
   th: { color: '#98A2B3', fontWeight: 700, textAlign: 'left', padding: '10px 8px', borderBottom: '1px solid #EAECF0' },
   td: { padding: '13px 8px', borderBottom: '1px solid #F0F2F5', color: '#475467' },

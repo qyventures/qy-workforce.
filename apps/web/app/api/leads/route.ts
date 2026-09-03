@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
         p_email: email,
         p_phone: phone,
         p_manpower_request: requirements ?? rolesHeadcount,
+        p_pdpa_consent: pdpaConsent,
         p_source: source,
         p_campaign: campaign,
         p_whatsapp_consent: whatsappConsent,

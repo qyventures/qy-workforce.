@@ -11,6 +11,7 @@ create or replace function public.submit_employer_lead_public(
   p_email text,
   p_phone text,
   p_manpower_request text,
+  p_pdpa_consent boolean,
   p_source text default 'website_employer',
   p_campaign text default 'qy_workforce_employer_leads',
   p_whatsapp_consent boolean default false
@@ -27,6 +28,7 @@ declare
   v_phone text := regexp_replace(coalesce(p_phone,''), '[^0-9+]', '', 'g');
   v_request text := trim(coalesce(p_manpower_request,''));
 begin
+  if p_pdpa_consent is not true then raise exception 'PDPA consent required'; end if;
   if char_length(trim(coalesce(p_company_name,''))) not between 2 and 160 then raise exception 'invalid company'; end if;
   if char_length(trim(coalesce(p_contact_name,''))) not between 2 and 120 then raise exception 'invalid contact'; end if;
   if char_length(v_email) > 254 or v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then raise exception 'invalid email'; end if;
@@ -58,8 +60,8 @@ begin
   return jsonb_build_object('lead_id', v_lead_id, 'sheet_sync_token', v_token, 'qualification_queued', p_whatsapp_consent);
 end $$;
 
-revoke all on function public.submit_employer_lead_public(text,text,text,text,text,text,text,boolean) from public;
-grant execute on function public.submit_employer_lead_public(text,text,text,text,text,text,text,boolean) to anon;
+revoke all on function public.submit_employer_lead_public(text,text,text,text,text,boolean,text,text,boolean) from public;
+grant execute on function public.submit_employer_lead_public(text,text,text,text,text,boolean,text,text,boolean) to anon;
 
 create or replace function public.mark_employer_lead_sheet_sync_public(
   p_lead_id uuid,

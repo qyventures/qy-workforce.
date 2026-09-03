@@ -26,7 +26,10 @@ begin
     raise exception 'unsupported decision';
   end if;
 
-  select worker_id, request_type, status, retention_hold
+  -- 202609011240 adds requester_id for the broader PDPA workflow while
+  -- 0017's legacy RPC continues to populate worker_id. Review must support
+  -- both representations or newly submitted requests become unreviewable.
+  select coalesce(requester_id, worker_id), request_type, status, retention_hold
     into v_worker, v_type, v_old_status, v_old_hold
   from public.privacy_requests
   where id = p_request

@@ -43,6 +43,9 @@ begin
   if position('privacy request is terminal' in v_def) = 0 then
     raise exception 'terminal-state guard missing';
   end if;
+  if position('coalesce(requester_id, worker_id)' in lower(v_def)) = 0 then
+    raise exception 'review must support requester_id and legacy worker_id';
+  end if;
   if position('reason required when changing retention hold' in v_def) = 0 then
     raise exception 'retention-hold rationale guard missing';
   end if;

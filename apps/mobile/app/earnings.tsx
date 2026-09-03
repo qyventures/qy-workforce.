@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { mobileErrorMessage } from '../lib/errors';
 import { supabase } from '../lib/supabase';
+import { WorkerNav } from '../lib/worker-nav';
 
 type Assignment = {
   id: string;
@@ -72,7 +73,9 @@ export default function EarningsScreen() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useFocusEffect(useCallback(() => {
+    void load();
+  }, []));
 
   const rows = useMemo(() => items.flatMap((assignment) =>
     (assignment.timesheets ?? []).map((timesheet) => ({ assignment, timesheet }))), [items]);
@@ -123,6 +126,7 @@ export default function EarningsScreen() {
           <Pressable accessibilityRole="button" style={styles.secondary} onPress={() => router.push({ pathname: '/assignment', params: { assignmentId: assignment.id } })}><Text style={styles.secondaryText}>View shift details</Text></Pressable>
         </View>;
       })}
+      <WorkerNav />
     </ScrollView>
   );
 }

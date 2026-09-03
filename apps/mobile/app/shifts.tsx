@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { isLikelyNetworkError } from '../lib/errors';
+import { WorkerNav } from '../lib/worker-nav';
 
 type Shift = {
   id: string;
@@ -84,10 +85,15 @@ export default function ShiftsScreen() {
     setRefreshing(false);
   };
 
-  useEffect(() => { void loadShifts(); }, []);
+  useFocusEffect(useCallback(() => {
+    void loadShifts();
+  }, []));
 
   const acceptShift = async (shift: Shift) => {
-    if (!supabase) { router.push('/attendance'); return; }
+    if (!supabase) {
+      Alert.alert('Demo mode', 'Connect a staging Supabase project to accept a live shift.');
+      return;
+    }
     setAcceptingId(shift.id);
     const { data: assignmentId, error } = await supabase.rpc('accept_shift', { p_shift_id: shift.id });
     setAcceptingId(null);
@@ -133,6 +139,7 @@ export default function ShiftsScreen() {
         </View>
       ))}
       <Pressable style={styles.secondaryButton} onPress={() => router.push('/my-shifts')} accessibilityRole="button"><Text style={styles.secondaryButtonText}>View my accepted shifts</Text></Pressable>
+      <WorkerNav />
       <Text style={styles.note}>{supabase ? 'Live staging feed. Refresh before making plans; availability can change quickly.' : 'Demo mode only. Configure staging Supabase environment variables to use live matching.'}</Text>
     </ScrollView>
   );

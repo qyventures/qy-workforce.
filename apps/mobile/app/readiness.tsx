@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link, router } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Link, router, useFocusEffect } from 'expo-router';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { isLikelyNetworkError } from '../lib/errors';
 import { supabase } from '../lib/supabase';
+import { WorkerNav } from '../lib/worker-nav';
 
 type Readiness = {
   worker_status: string;
@@ -86,9 +87,9 @@ export default function ReadinessScreen() {
     }
   }, []);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     void load();
-  }, [load]);
+  }, [load]));
 
   const checks = [
     ['Identity verified', state.identity_verified],
@@ -164,6 +165,7 @@ export default function ReadinessScreen() {
         <Link href="/my-shifts" style={styles.secondaryLink} accessibilityRole="link" accessibilityLabel="View my shifts">
           View my shifts
         </Link>
+        <WorkerNav />
       </ScrollView>
     </SafeAreaView>
   );

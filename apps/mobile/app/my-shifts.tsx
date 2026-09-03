@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { isLikelyNetworkError, mobileErrorMessage } from '../lib/errors';
 import { supabase } from '../lib/supabase';
+import { WorkerNav } from '../lib/worker-nav';
 
 type Assignment = {
   id: string;
@@ -60,7 +61,9 @@ export default function MyShiftsScreen() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useFocusEffect(useCallback(() => {
+    void load();
+  }, []));
 
   async function submitTimesheet(assignmentId: string) {
     if (!supabase) { Alert.alert('Demo mode', 'Timesheet submission will be enabled after staging is connected.'); return; }
@@ -103,6 +106,7 @@ export default function MyShiftsScreen() {
         {!cancelled && (!ts || ts.status === 'draft' || ts.status === 'rejected') && <Pressable accessibilityRole="button" accessibilityState={{ disabled: submitting === a.id }} style={[styles.primary, submitting === a.id && styles.disabled]} disabled={submitting === a.id} onPress={() => submitTimesheet(a.id)}><Text style={styles.primaryText}>{submitting === a.id ? 'Submitting…' : 'Submit timesheet'}</Text></Pressable>}
       </View>;
     })}
+    <WorkerNav />
   </ScrollView>;
 }
 

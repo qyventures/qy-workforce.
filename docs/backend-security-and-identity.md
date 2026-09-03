@@ -34,6 +34,8 @@ Publishing is deliberately separate. `open_shift(shift_id)` can transition only 
 
 The current 10% margin threshold is an operational warning, not a database hard-stop. This avoids silently changing commercial policy while still surfacing low-margin demand for Ops review.
 
+Approved worker availability exceptions are part of the authoritative matching boundary. Submitted, rejected and cancelled exceptions remain visible for workflow history but do not block work; an approved overlapping exception is excluded from the worker shift feed and rejected again by `accept_shift(...)` under the same server-side predicate. This keeps discovery and acceptance consistent when availability changes after a feed was loaded.
+
 ## Attendance and timesheets
 
 Clock events are tied to an accepted assignment and validated server-side against the authoritative site geofence and timing window. Clock-out creates/updates a draft timesheet. Supervisor/Ops review is site-scoped and produces auditable approve/reject transitions.

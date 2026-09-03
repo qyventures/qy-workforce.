@@ -1,4 +1,8 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabase';
 
 const metrics = [
   { label: 'Open shifts', value: '42', sub: '11 starting today' },
@@ -20,7 +24,42 @@ const exceptions = [
   '2 workers missing required training for tomorrow',
 ];
 
+type Cockpit = {
+  active_jobs: number;
+  active_required_headcount: number;
+  active_filled_headcount: number;
+  checked_in_workers: number;
+  unassigned_jobs_7d: number;
+  live_headcount_gap: number;
+  fulfilment_percent_7d: number;
+  submitted_timesheets: number;
+  month_gross_margin_pct: number;
+};
+
 export default function OpsDashboard() {
+  const [cockpit, setCockpit] = useState<Cockpit | null>(null);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    if (!supabase) return;
+    let active = true;
+    void supabase.rpc('get_management_cockpit', { p_as_of: new Date().toISOString() }).then(({ data, error }) => {
+      if (!active) return;
+      if (error) setMessage(error.message.includes('authorised') || error.message.includes('authentication')
+        ? 'Sign in with an authorised Ops, finance, admin or auditor account to view live command-centre metrics.'
+        : 'Unable to load live command-centre metrics. No operational records were changed.');
+      else setCockpit((data ?? null) as Cockpit | null);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const liveMetrics = cockpit ? [
+    { label: 'Active jobs', value: String(cockpit.active_jobs), sub: `${cockpit.active_filled_headcount}/${cockpit.active_required_headcount} workers filled` },
+    { label: '7-day fulfilment', value: `${Number(cockpit.fulfilment_percent_7d).toFixed(1)}%`, sub: `${cockpit.unassigned_jobs_7d} upcoming jobs with gaps` },
+    { label: 'Checked in now', value: String(cockpit.checked_in_workers), sub: `${cockpit.live_headcount_gap} live headcount gaps` },
+    { label: 'Timesheets pending', value: String(cockpit.submitted_timesheets), sub: `Month GM ${Number(cockpit.month_gross_margin_pct).toFixed(1)}%` },
+  ] : metrics;
+
   return (
     <main style={styles.page}>
       <aside style={styles.sidebar}>
@@ -47,8 +86,11 @@ export default function OpsDashboard() {
           <Link href="/ops/shifts#create-shift" style={styles.primaryButton}>Create shift</Link>
         </header>
 
+        {supabase && !cockpit && !message && <div role="status" style={styles.notice}>Loading authorised live metrics…</div>}
+        {message && <div role="status" style={styles.notice}>{message}</div>}
+
         <div style={styles.metricGrid}>
-          {metrics.map((metric) => (
+          {liveMetrics.map((metric) => (
             <article key={metric.label} style={styles.metricCard}>
               <div style={styles.metricLabel}>{metric.label}</div>
               <div style={styles.metricValue}>{metric.value}</div>
@@ -62,12 +104,12 @@ export default function OpsDashboard() {
             <div style={styles.panelHeader}>
               <div>
                 <div style={styles.panelTitle}>Active sites</div>
-                <div style={styles.panelSub}>Current fill and estimated gross margin</div>
+              <div style={styles.panelSub}>{supabase ? 'Use Planning & SLA for the live site-level coverage view' : 'Demonstration coverage only'}</div>
               </div>
               <Link href="/ops/clients" style={styles.ghostButton}>View all</Link>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
+            {supabase ? <div style={styles.liveSummary}>Site-level coverage and SLA detail is available in the <Link href="/ops/planning" style={styles.inlineLink}>Planning & SLA cockpit</Link>, which applies the same server-side role scope.</div> : <div style={{ overflowX: 'auto' }}>
               <table style={styles.table}>
                 <thead>
                   <tr>
@@ -90,7 +132,7 @@ export default function OpsDashboard() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </div>}
           </section>
 
           <aside style={styles.panel}>
@@ -112,18 +154,18 @@ export default function OpsDashboard() {
           <div style={styles.panelHeader}>
             <div>
               <div style={styles.panelTitle}>Approval queue</div>
-              <div style={styles.panelSub}>19 timesheets pending supervisor or operations approval</div>
+              <div style={styles.panelSub}>{cockpit ? `${cockpit.submitted_timesheets} timesheets pending supervisor or operations approval` : 'Demonstration approval categories'}</div>
             </div>
             <Link href="/ops/timesheets" style={styles.ghostButton}>Open queue</Link>
           </div>
-          <div style={styles.approvalStrip}>
+          {supabase ? <div style={styles.liveSummary}>Open the approval queue to review masked timesheet and attendance-correction records. Decisions are enforced and audited by server-side RPCs.</div> : <div style={styles.approvalStrip}>
             <div><strong>12</strong><span> clean matches</span></div>
             <div><strong>5</strong><span> overtime review</span></div>
             <div><strong>2</strong><span> geofence exception</span></div>
-          </div>
+          </div>}
         </section>
 
-        <p style={styles.disclaimer}>Staging dashboard with demo operational data. Production views will be role-scoped using Supabase RLS and audit every approval/export action.</p>
+        <p style={styles.disclaimer}>{supabase ? 'Live metrics are returned by the privileged, read-only management cockpit. Workflow mutations remain behind their audited RPCs.' : 'Staging dashboard with demonstration data only. Configure staging Supabase to view role-scoped live metrics.'}</p>
       </section>
     </main>
   );
@@ -164,4 +206,7 @@ const styles: Record<string, any> = {
   exceptionDot: { width: 8, height: 8, flex: '0 0 auto', borderRadius: 99, background: '#F79009', marginTop: 5 },
   approvalStrip: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, color: '#667085', fontSize: 14 },
   disclaimer: { color: '#98A2B3', fontSize: 12, margin: '14px 2px 0' },
+  notice: { background: '#EEF2FF', border: '1px solid #C7D2FE', color: '#3730A3', borderRadius: 12, padding: 12, marginBottom: 16, fontSize: 13 },
+  liveSummary: { padding: 18, border: '1px dashed #D0D5DD', borderRadius: 12, color: '#667085', lineHeight: 1.5, fontSize: 13 },
+  inlineLink: { color: '#344054', fontWeight: 700 },
 };

@@ -24,6 +24,8 @@ Operational consent is an append-only decision history. `worker_has_active_conse
 
 Worker document uploads store metadata and a worker-scoped object key only. Raw files must remain in a private storage bucket and be served through short-lived signed URLs; keys cannot be URLs, traversal paths or cross-worker paths. Workers cannot choose document retention. Ops/Admin or a service-role retention job assigns a future retention deadline through `set_worker_document_retention(...)`, with an audit event. This keeps document retention policy separate from worker-submitted identity, residency and work-eligibility facts.
 
+Document lifecycle evidence is database-enforced for forward writes: submitted rows have no reviewer or retirement evidence, reviewed states require both reviewer and review timestamp, and retired rows require a retirement timestamp. The review RPC locks the row and permits only submitted-to-review transitions, preventing stale or contradictory document decisions.
+
 ## Shift demand lifecycle
 
 Demand creation is server-authoritative. `clients`, `sites`, `roles` and `shifts` have RLS enabled, and anonymous/authenticated clients have no direct INSERT/UPDATE/DELETE privileges on those tables.

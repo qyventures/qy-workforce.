@@ -45,12 +45,14 @@ export default function ShiftsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [connectionIssue, setConnectionIssue] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const sorted = useMemo(() => [...shifts].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt)), [shifts]);
 
   const loadShifts = async (refresh = false) => {
     if (!supabase) return;
     refresh ? setRefreshing(true) : setLoading(true);
+    setLoadError(null);
 
     const { data: authData, error: authError } = await supabase.auth.getSession();
     if (authError || !authData.session) {
@@ -63,11 +65,15 @@ export default function ShiftsScreen() {
     const { data, error } = await supabase.rpc('get_available_shifts');
     if (error) {
       setConnectionIssue(isLikelyNetworkError(error));
+      setLoadError(isLikelyNetworkError(error)
+        ? 'We could not reach the shift feed. Reconnect, then refresh before accepting a shift.'
+        : 'The shift feed is temporarily unavailable. Please refresh and try again.');
       Alert.alert('Unable to load shifts', isLikelyNetworkError(error)
         ? 'You may be offline or on an unstable connection. Reconnect, then pull down to retry.'
         : 'Please try again. No private client data has been cached on this device.');
     } else {
       setConnectionIssue(false);
+      setLoadError(null);
       setShifts((data ?? []).map((row: any) => ({
         id: row.shift_id, role: row.role_name, client: row.client_name, site: row.site_name,
         startsAt: row.starts_at, endsAt: row.ends_at, rate: Number(row.worker_rate ?? 0),
@@ -112,7 +118,9 @@ export default function ShiftsScreen() {
         <Pressable style={styles.profileButton} onPress={() => router.push('/readiness')} accessibilityRole="button"><Text style={styles.profileButtonText}>Readiness</Text></Pressable>
       </View>
       <Text style={styles.subtitle}>Only jobs matching your approved roles and deployability are shown.</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Refresh available shifts" accessibilityState={{ disabled: loading || refreshing }} disabled={loading || refreshing} style={[styles.refreshButton, (loading || refreshing) && styles.disabledButton]} onPress={() => void loadShifts(true)}><Text style={styles.refreshButtonText}>{refreshing ? 'Refreshing shifts…' : 'Refresh shifts'}</Text></Pressable>
       {connectionIssue && <View style={styles.connectionCard} accessibilityRole="alert"><Text style={styles.connectionTitle}>Connection issue</Text><Text style={styles.connectionBody}>Reconnect to the internet, then pull down to retry. Shift acceptance is never assumed when the server cannot confirm it.</Text></View>}
+      {loadError && !connectionIssue && <View style={styles.connectionCard} accessibilityRole="alert"><Text style={styles.connectionTitle}>Could not load shifts</Text><Text style={styles.connectionBody}>{loadError}</Text></View>}
       {loading && <ActivityIndicator size="large" style={styles.loader} />}
       {!loading && sorted.length === 0 && <View style={styles.emptyCard}><Text style={styles.emptyTitle}>No eligible shifts right now</Text><Text style={styles.emptyBody}>New shifts will appear here when they match your approved roles and readiness status.</Text></View>}
       {sorted.map((shift) => (
@@ -125,11 +133,11 @@ export default function ShiftsScreen() {
         </View>
       ))}
       <Pressable style={styles.secondaryButton} onPress={() => router.push('/my-shifts')} accessibilityRole="button"><Text style={styles.secondaryButtonText}>View my accepted shifts</Text></Pressable>
-      <Text style={styles.note}>{supabase ? 'Live staging feed. Pull down to refresh.' : 'Demo mode only. Configure staging Supabase environment variables to use live matching.'}</Text>
+      <Text style={styles.note}>{supabase ? 'Live staging feed. Refresh before making plans; availability can change quickly.' : 'Demo mode only. Configure staging Supabase environment variables to use live matching.'}</Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { padding: 22, paddingTop: 64, backgroundColor: '#F5F7FB', flexGrow: 1 }, headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, eyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 1.3, color: '#4D63FF' }, title: { fontSize: 32, lineHeight: 38, fontWeight: '800', color: '#111827', marginTop: 4 }, subtitle: { fontSize: 16, lineHeight: 23, color: '#667085', marginTop: 8, marginBottom: 18 }, profileButton: { backgroundColor: '#E8ECFF', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12 }, profileButtonText: { color: '#3448C5', fontWeight: '700' }, connectionCard: { backgroundColor: '#FFF4E5', borderRadius: 16, padding: 16, marginBottom: 14 }, connectionTitle: { color: '#B54708', fontWeight: '800', fontSize: 16 }, connectionBody: { color: '#7A2E0E', marginTop: 6, lineHeight: 20 }, loader: { marginVertical: 32 }, emptyCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, marginBottom: 14 }, emptyTitle: { fontSize: 18, fontWeight: '800', color: '#101828' }, emptyBody: { marginTop: 7, color: '#667085', lineHeight: 20 }, card: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 }, cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 }, role: { fontSize: 20, fontWeight: '800', color: '#101828' }, client: { marginTop: 5, fontSize: 14, color: '#667085' }, ratePill: { backgroundColor: '#EEFDF3', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999 }, rate: { fontWeight: '800', color: '#027A48' }, meta: { marginTop: 12, color: '#344054', fontWeight: '600' }, tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }, tag: { backgroundColor: '#F2F4F7', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }, tagText: { fontSize: 12, color: '#475467', fontWeight: '600', textTransform: 'capitalize' }, primaryButton: { backgroundColor: '#111827', borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginTop: 18 }, disabledButton: { opacity: 0.55 }, primaryButtonText: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 }, secondaryButton: { borderWidth: 1, borderColor: '#D0D5DD', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 4 }, secondaryButtonText: { color: '#344054', fontWeight: '800' }, note: { color: '#98A2B3', fontSize: 12, lineHeight: 18, marginTop: 16, marginBottom: 28 },
+  page: { padding: 22, paddingTop: 64, backgroundColor: '#F5F7FB', flexGrow: 1 }, headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, eyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 1.3, color: '#4D63FF' }, title: { fontSize: 32, lineHeight: 38, fontWeight: '800', color: '#111827', marginTop: 4 }, subtitle: { fontSize: 16, lineHeight: 23, color: '#667085', marginTop: 8, marginBottom: 18 }, profileButton: { backgroundColor: '#E8ECFF', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12 }, profileButtonText: { color: '#3448C5', fontWeight: '700' }, connectionCard: { backgroundColor: '#FFF4E5', borderRadius: 16, padding: 16, marginBottom: 14 }, connectionTitle: { color: '#B54708', fontWeight: '800', fontSize: 16 }, connectionBody: { color: '#7A2E0E', marginTop: 6, lineHeight: 20 }, loader: { marginVertical: 32 }, emptyCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, marginBottom: 14 }, emptyTitle: { fontSize: 18, fontWeight: '800', color: '#101828' }, emptyBody: { marginTop: 7, color: '#667085', lineHeight: 20 }, card: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 }, cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 }, role: { fontSize: 20, fontWeight: '800', color: '#101828' }, client: { marginTop: 5, fontSize: 14, color: '#667085' }, ratePill: { backgroundColor: '#EEFDF3', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999 }, rate: { fontWeight: '800', color: '#027A48' }, meta: { marginTop: 12, color: '#344054', fontWeight: '600' }, tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }, tag: { backgroundColor: '#F2F4F7', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }, tagText: { fontSize: 12, color: '#475467', fontWeight: '600', textTransform: 'capitalize' }, primaryButton: { backgroundColor: '#111827', borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginTop: 18 }, disabledButton: { opacity: 0.55 }, primaryButtonText: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 }, secondaryButton: { borderWidth: 1, borderColor: '#D0D5DD', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 4 }, secondaryButtonText: { color: '#344054', fontWeight: '800' }, note: { color: '#98A2B3', fontSize: 12, lineHeight: 18, marginTop: 16, marginBottom: 28 }, refreshButton: { borderWidth: 1, borderColor: '#D0D5DD', backgroundColor: '#FFFFFF', borderRadius: 12, minHeight: 44, alignItems: 'center', justifyContent: 'center', marginBottom: 14 }, refreshButtonText: { color: '#344054', fontWeight: '800' },
 });

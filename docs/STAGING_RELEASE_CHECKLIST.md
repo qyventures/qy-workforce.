@@ -16,6 +16,8 @@ Use only synthetic staging data and staging-only credentials. Do not copy produc
 - [ ] Mobile: run `npm run typecheck` and `npm test` from `apps/mobile`.
 - [ ] Build internal previews only: `eas build --platform android --profile preview` and `eas build --platform ios --profile preview` from `apps/mobile`. Android preview is an APK; iOS preview is an internal device build. Do not submit either build.
 - [ ] Confirm the build is on the `preview` update channel and reports `EXPO_PUBLIC_APP_ENV=preview` where that value is surfaced.
+- [ ] On both platforms, verify the worker can recover from an interrupted shift-feed/readiness request using the visible refresh action, and that session expiry returns to sign-in.
+- [ ] Check TalkBack/VoiceOver labels and focus order for sign-in, readiness, shift acceptance, attendance clock actions, timesheet submission and sign-out.
 
 ## Smoke test and sign-off
 

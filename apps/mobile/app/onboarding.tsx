@@ -90,6 +90,7 @@ export default function OnboardingScreen() {
           autoComplete="name"
           textContentType="name"
           style={styles.input}
+          accessibilityLabel="Full name"
         />
         <TextInput
           value={email}
@@ -101,6 +102,7 @@ export default function OnboardingScreen() {
           autoComplete="email"
           textContentType="emailAddress"
           style={styles.input}
+          accessibilityLabel="Email address, optional"
         />
 
         <Text style={styles.section}>Primary work interests</Text>
@@ -132,7 +134,7 @@ export default function OnboardingScreen() {
           <Text style={styles.consentText}>I consent to QY Workforce using my data for identity verification, work eligibility, location-based attendance and workforce administration under policy version {POLICY_VERSION}.</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity disabled={!canContinue} onPress={submit} style={[styles.button, !canContinue && styles.buttonDisabled]}>
+        <TouchableOpacity disabled={!canContinue} onPress={submit} style={[styles.button, !canContinue && styles.buttonDisabled]} accessibilityRole="button" accessibilityState={{ disabled: !canContinue, busy: submitting }} accessibilityLabel="Continue to readiness">
           <Text style={styles.buttonText}>{submitting ? 'Saving…' : 'Continue to readiness'}</Text>
         </TouchableOpacity>
       </ScrollView>

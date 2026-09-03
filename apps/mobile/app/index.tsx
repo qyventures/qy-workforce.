@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, router } from 'expo-router';
-import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { supabase } from '../lib/supabase';
 
 const cards = [
@@ -28,7 +28,12 @@ export default function HomeScreen() {
       setCheckingSession(false);
     });
 
-    return () => { mounted = false; };
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) router.replace('/sign-in');
+    });
+
+    return () => { mounted = false; authListener.subscription.unsubscribe(); };
   }, []);
 
   if (checkingSession) {
@@ -41,6 +46,12 @@ export default function HomeScreen() {
         <Text style={styles.eyebrow}>QY WORKFORCE</Text>
         <Text style={styles.title}>Work that fits your schedule.</Text>
         <Text style={styles.subtitle}>Verified shifts, clear pay, simple attendance and one worker profile.</Text>
+
+        <View style={styles.navRow} accessibilityLabel="Worker shortcuts">
+          <Pressable accessibilityRole="button" style={styles.navButton} onPress={() => router.push('/shifts')}><Text style={styles.navButtonText}>Find shifts</Text></Pressable>
+          <Pressable accessibilityRole="button" style={styles.navButton} onPress={() => router.push('/my-shifts')}><Text style={styles.navButtonText}>My shifts</Text></Pressable>
+          <Pressable accessibilityRole="button" style={styles.navButton} onPress={() => router.push('/earnings')}><Text style={styles.navButtonText}>Earnings</Text></Pressable>
+        </View>
 
         <View style={styles.statusCard}>
           <Text style={styles.statusTitle}>Deployment readiness</Text>
@@ -57,6 +68,7 @@ export default function HomeScreen() {
             </View>
           </Link>
         ))}
+        <Pressable accessibilityRole="button" accessibilityLabel="Sign out of QY Workforce" style={styles.signOut} onPress={() => void supabase?.auth.signOut()}><Text style={styles.signOutText}>Sign out</Text></Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -78,4 +90,5 @@ const styles = StyleSheet.create({
   cardTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '600' },
   cardBody: { color: '#B3B3B3', fontSize: 15, lineHeight: 22, marginTop: 8 },
   cardLink: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', marginTop: 12 },
+  navRow: { flexDirection: 'row', gap: 8 }, navButton: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }, navButtonText: { color: '#111111', fontWeight: '700', fontSize: 13 }, signOut: { minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 4 }, signOutText: { color: '#B3B3B3', fontWeight: '600' },
 });

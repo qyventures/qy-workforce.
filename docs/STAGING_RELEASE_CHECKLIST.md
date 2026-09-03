@@ -7,7 +7,7 @@ Use only synthetic staging data and staging-only credentials. Do not copy produc
 - [ ] Use Node 22 (`.nvmrc`) and install each app's declared dependencies with its approved package manager.
 - [ ] Configure `apps/mobile/.env.example` values in the EAS **preview** environment; configure `apps/web/.env.example` values in the staging host secret store. The service-role key is server-only.
 - [ ] Run `node scripts/release/verify-release-readiness.mjs`.
-- [ ] Apply Supabase migrations in ascending filename/version order. Do not edit an already-applied migration; add a newer migration instead.
+- [ ] Apply Supabase migrations through `STAGING_MIGRATION_CONFIRMATION=I_UNDERSTAND_STAGING_ONLY STAGING_DATABASE_URL=... scripts/release/run-staging-migrations.sh`; this validates filename/version order and uses Supabase's migration ledger. Do not edit an already-applied migration; add a newer migration instead.
 - [ ] If fixtures are needed, run `STAGING_SEED_CONFIRMATION=I_UNDERSTAND_SYNTHETIC_ONLY scripts/release/run-staging-seed.sh`; this applies only the checked-in synthetic seed and never creates auth users.
 - [ ] Run `scripts/release/run-supabase-checks.sh` with `STAGING_DATABASE_URL` supplied by the staging secret store. The checks are read-only except the audit-minimisation regression, which rolls its transaction back.
 

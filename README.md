@@ -48,6 +48,7 @@ Use the public-value templates in `apps/mobile/.env.example` and `apps/web/.env.
 ```sh
 node scripts/release/verify-release-readiness.mjs
 scripts/release/run-supabase-checks.sh # requires STAGING_DATABASE_URL
+STAGING_MIGRATION_CONFIRMATION=I_UNDERSTAND_STAGING_ONLY STAGING_DATABASE_URL=postgres://... scripts/release/run-staging-migrations.sh # staging URL supplied by secret store
 STAGING_SEED_CONFIRMATION=I_UNDERSTAND_SYNTHETIC_ONLY scripts/release/run-staging-seed.sh # optional synthetic fixtures
 STAGING_WEB_URL=https://staging.example.invalid scripts/release/run-staging-smoke.sh
 ```

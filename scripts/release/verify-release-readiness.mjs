@@ -14,7 +14,9 @@ for (const file of [
   'apps/mobile/.env.example',
   'apps/web/.env.example',
   'apps/mobile/eas.json',
+  'apps/mobile/app.config.js',
   'docs/STAGING_RELEASE_CHECKLIST.md',
+  'scripts/release/run-staging-migrations.sh',
   'scripts/release/run-staging-seed.sh',
   'supabase/seed/staging.sql',
 ]) {
@@ -56,6 +58,13 @@ if (existsSync(join(root, 'apps/mobile/eas.json'))) {
   }
   if (preview?.android?.buildType !== 'apk') failures.push('EAS preview Android must produce an APK');
   if (preview?.ios?.simulator !== false) failures.push('EAS preview iOS must produce a device build');
+}
+
+if (existsSync(join(root, 'apps/mobile/app.config.js'))) {
+  const appConfig = readFileSync(join(root, 'apps/mobile/app.config.js'), 'utf8');
+  if (!appConfig.includes('EXPO_PUBLIC_APP_ENV')) {
+    failures.push('Expo config must derive its surfaced environment from EXPO_PUBLIC_APP_ENV');
+  }
 }
 
 if (failures.length) {

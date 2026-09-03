@@ -72,8 +72,12 @@ export function createQualificationWorker({ repository, messenger, qualifier, sh
       await repository.updateLead(leadType, leadId, { qualification_status: 'handoff_ready', ai_summary: summary, lead_score: score, next_action: 'BD review and follow-up' });
       const conversationId = `${leadType}:${leadId}`;
       await sheetClient.upsertQualifiedLead({ lead, summary, score, status: 'handoff_ready', conversationId });
+      const hotLead = leadType === 'employer' && (result.hotLead === true || score >= 80);
+      if (hotLead && repository.createHumanHandoff) {
+        await repository.createHumanHandoff({ lead_type: leadType, lead_id: leadId, event_type: 'hot_lead', reason: summary, lead_score: score, status: 'open' });
+      }
       await repository.markQueueForLead(leadType, leadId, { status: 'handoff_ready', updated_at: now(), last_error: null });
-      return { status: 'handoff_ready', score };
+      return { status: 'handoff_ready', score, hotLead };
     }
     const reply = clampMessage(result.reply);
     const sent = await messenger.send({ from: QY_WORKFORCE_WHATSAPP_SENDER, to: lead.phone, text: reply });

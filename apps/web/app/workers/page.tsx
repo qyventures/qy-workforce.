@@ -5,10 +5,12 @@ import { ConsentBanner, SiteFooter, SiteHeader, trackConversion } from '../compo
 
 export default function WorkersPage() {
   const [state, setState] = useState<'idle'|'sending'|'done'|'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setState('sending');
+    setErrorMessage('');
     trackConversion('worker_lead_submit_attempt');
     const form = new FormData(e.currentTarget);
     const payload = {
@@ -32,14 +34,27 @@ export default function WorkersPage() {
         headers:{'content-type':'application/json'},
         body:JSON.stringify(payload),
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null) as { message?: string } | null;
+        setErrorMessage(body?.message || 'We could not submit your interest. Please check the required fields and try again.');
+      }
       setState(res.ok ? 'done' : 'error');
       if (res.ok) trackConversion('worker_lead_submit_success');
     } catch {
+      setErrorMessage('We could not reach the registration service. Please try again in a moment.');
       setState('error');
     }
   }
 
   return <main id="main-content" style={{minHeight:'100vh',background:'#F9FAFB'}}><SiteHeader />
+    <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: 'Find flexible shifts | QY Workforce',
+      description: 'Register interest in flexible work across Singapore.',
+      isPartOf: { '@type': 'WebSite', name: 'QY Workforce', url: 'https://qyworkforce.com' },
+      audience: { '@type': 'Audience', audienceType: 'Workers seeking flexible work' },
+    })}} />
     <section style={{maxWidth:1120,margin:'0 auto',padding:'clamp(42px,7vw,76px) 24px',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%, 320px),1fr))',gap:52,alignItems:'start'}}>
       <div><p style={eyebrow}>QY WORKFORCE FOR WORKERS</p><h1 style={{fontSize:'clamp(40px,6vw,66px)',letterSpacing:'-.05em',lineHeight:1.02,margin:'14px 0 18px'}}>Find work that works around your life.</h1><p style={{fontSize:18,lineHeight:1.65,color:'#475467',maxWidth:530}}>Register your interest in roles across hospitality, F&B, cleaning, retail, promotions and events. This is not a job offer: eligibility and onboarding are completed separately.</p><div style={{marginTop:30,display:'grid',gap:14}}>{['Tell us which work you are interested in','Share the days and locations that suit you','Review each opportunity before accepting a shift'].map((item) => <div key={item} style={{display:'flex',gap:10,color:'#344054'}}><span aria-hidden="true" style={{color:'#0A0A0A',fontWeight:900}}>✓</span>{item}</div>)}</div><p style={{marginTop:34,fontSize:14,lineHeight:1.55,color:'#667085'}}>No Singpass is needed to register interest. For your safety, do not include NRIC, bank details, or copies of identity documents in this form.</p></div>
       <div style={card}>{state==='done' ? <div aria-live="polite"><strong style={{fontSize:21}}>Interest received.</strong><p style={{lineHeight:1.6,color:'#475467'}}>We’ll review your details. If you opted in to WhatsApp follow-up, our qualification assistant may contact you about your work interests and availability.</p><a href="#main-content" style={{color:'#101828',fontWeight:750}}>Return to the form ↑</a></div> : <><h2 style={{margin:'0 0 6px',fontSize:24}}>Register your interest</h2><p style={{margin:'0 0 22px',color:'#667085',lineHeight:1.55,fontSize:14}}>No Singpass is required for this first step. This form is for work-interest registration, not shift confirmation.</p>
@@ -54,7 +69,7 @@ export default function WorkersPage() {
       <label style={consentStyle}><input required type="checkbox" name="pdpaConsent"/> <span>I consent to QY Workforce using these details for recruitment and onboarding follow-up, in line with the <a href="/privacy">Privacy Notice</a>.</span></label>
       <label style={consentStyle}><input type="checkbox" name="whatsappConsent"/> <span>I agree to be contacted on WhatsApp about QY Workforce opportunities, including by an automated qualification assistant. I can ask to stop messages at any time.</span></label>
       <button type="submit" disabled={state==='sending'} style={buttonStyle}>{state==='sending'?'Submitting…':'Register for gig work'}</button>
-      {state==='error' && <p role="alert" aria-live="assertive" style={{color:'#B42318',margin:0}}>We could not submit your interest. Please check the required fields and try again.</p>}
+      {state==='error' && <p role="alert" aria-live="assertive" style={{color:'#B42318',margin:0}}>{errorMessage}</p>}
     </form></>}</div>
     </section>
     <section aria-labelledby="worker-next-heading" style={{maxWidth:1120,margin:'0 auto',padding:'0 24px 72px'}}>

@@ -4,6 +4,7 @@ html { scroll-behavior: smooth; }
 body { overflow-x: hidden; }
 button, input, textarea, select { font: inherit; }
 .site-nav-links { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.site-nav-links a, .site-mobile-links a { min-height: 44px; display: inline-flex; align-items: center; }
 .site-mobile-menu { display: none; }
 .site-mobile-menu summary { cursor: pointer; list-style: none; border: 1px solid #D0D5DD; border-radius: 8px; padding: 9px 11px; font-weight: 750; color: #344054; }
 .site-mobile-menu summary::-webkit-details-marker { display: none; }
@@ -18,5 +19,6 @@ button:disabled { cursor: wait; opacity: .7; }
   .site-mobile-menu { display: block; }
   .journey-grid { grid-template-columns: 1fr; }
   .site-mobile-menu[open] { width: 100%; }
+  .site-mobile-menu[open] .site-mobile-links { padding-bottom: 8px; }
   .site-mobile-links a { border-bottom: 1px solid #EAECF0; }
 }

@@ -19,6 +19,13 @@ const industries = [
 
 export default function Industries() {
   return <main id="main-content" style={{minHeight:'100vh',background:'#F7F8FB',color:'#101828'}}><SiteHeader />
+    <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: 'Industries supported by QY Workforce',
+      description: 'Flexible staffing support for Singapore operations across six industries.',
+      hasPart: industries.map(([name]) => ({ '@type': 'Thing', name })),
+    })}} />
     <section style={{maxWidth:1080,margin:'0 auto',padding:'64px 24px'}}>
       <div style={{marginTop:40,color:'#4D63FF',fontWeight:850,fontSize:12,letterSpacing:1.3}}>INDUSTRIES</div>
       <h1 style={{fontSize:'clamp(38px,6vw,68px)',lineHeight:1.04,letterSpacing:'-.045em',maxWidth:850,margin:'9px 0 16px'}}>Built for labour-intensive operations where fill rate matters.</h1>

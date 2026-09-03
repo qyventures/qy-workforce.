@@ -17,6 +17,13 @@ const steps = [
 
 export default function HowItWorks() {
   return <main id="main-content" style={{minHeight:'100vh',background:'#0B1220',color:'#fff'}}><SiteHeader />
+    <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'HowTo',
+      name: 'How QY Workforce staffing works',
+      description: 'The QY Workforce workflow from staffing requirements to approved records.',
+      step: steps.map(([name, title, text]) => ({ '@type': 'HowToStep', position: Number(name), name: title, text })),
+    })}} />
     <section style={{maxWidth:1050,margin:'0 auto',padding:'72px 24px'}}>
       <div style={{marginTop:42,color:'#8EA2FF',fontWeight:800,fontSize:12,letterSpacing:1.4}}>HOW IT WORKS</div>
       <h1 style={{fontSize:'clamp(38px,6vw,72px)',lineHeight:1.02,letterSpacing:'-.045em',maxWidth:850,margin:'10px 0 18px'}}>Flexible staffing with operational control built in.</h1>

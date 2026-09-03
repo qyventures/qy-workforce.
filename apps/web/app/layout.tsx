@@ -17,13 +17,14 @@ export const metadata: Metadata = {
     type: 'website',
     url: canonicalSiteUrl,
     siteName: 'QY Workforce',
+    locale: 'en_SG',
   },
   twitter: { card: 'summary_large_image', title: 'QY Workforce | Flexible staffing for Singapore', description: 'Flexible staffing, clear expectations and operational visibility for employers and workers.' },
   robots: { index: true, follow: true },
   category: 'staffing',
   keywords: ['casual staffing Singapore', 'flexible manpower Singapore', 'event crew', 'F&B staffing', 'gig work'],
   creator: 'QY Workforce',
-  other: { 'format-detection': 'telephone=no' },
+  other: { 'format-detection': 'telephone=no', 'theme-color': '#101828' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

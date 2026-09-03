@@ -48,7 +48,7 @@ Authenticated clients no longer have direct INSERT/UPDATE/DELETE privileges on `
 
 ## Payroll
 
-Only Finance/Admin can create, lock or export payroll batches. A batch contains approved timesheets only. Locking a batch moves its included timesheets to `payroll_ready`. Export requires a locked batch and records format/count/checksum in the audit trail. Payment-rail credentials and bank credentials remain outside this database.
+Only Finance/Admin can create, lock or export payroll batches. A batch contains approved timesheets only. Locking a batch moves its included timesheets to `payroll_ready`. Export requires a locked batch and records format/count/checksum in the audit trail. Payouts must move through `approved` to `processing` before `paid`; paid rows require approval/payment timestamps and an external payment reference. Payment-rail credentials and bank credentials remain outside this database.
 
 ## Margin reporting
 

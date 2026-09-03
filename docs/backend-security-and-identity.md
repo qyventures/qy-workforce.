@@ -12,6 +12,8 @@ The database stores only normalized verification outcomes and hashes needed for 
 
 Identity sessions are short-lived and single-active per worker/provider/environment. Starting a new flow expires stale sessions and rejects overlapping live sessions to reduce callback confusion and replay risk. State and nonce values must be supplied as sufficiently long hashes rather than raw secrets. The mock/staging contract permits only the `openid` correlation scope; it must not be expanded to retrieve raw MyInfo attributes without a separately reviewed provider contract.
 
+Session lifecycle evidence is mutually exclusive on forward writes: completed sessions require a completion timestamp and provider-subject hash, failed sessions require a bounded redacted error code, and initiated, callback-received and expired sessions cannot carry terminal evidence. This prevents a stale or contradictory provider result from being interpreted as a current identity outcome. Failure categories are normalized before storage; provider messages and payloads are not accepted.
+
 `mark_identity_callback_received_staging`, `fail_identity_session_staging` and `expire_identity_sessions` provide explicit, audited lifecycle transitions. The bulk expiry RPC is intended for service-role scheduling, while Ops/Admin can perform staging operational recovery. Production callback handling remains disabled.
 
 `complete_identity_verification_staging` is an Ops/Admin boundary. It can complete only an unexpired session that has first entered the audited callback-received state, requires an opaque provider-subject hash, and records identity outcome independently from residency and work eligibility. A residency category cannot be recorded unless residency is verified. It writes an audit event.

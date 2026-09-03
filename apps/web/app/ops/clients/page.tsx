@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
+import { safeOpsError, validateDateRange } from '../../../lib/ops';
 
 type MarginRow = {
   site_id: string;
@@ -39,8 +40,11 @@ export default function ClientsPage() {
 
   async function load() {
     if (!supabase) return;
-    if (!start || !end || end < start) {
-      setMessage('Choose a valid reporting period.');
+    const rangeError = validateDateRange(start, end);
+    if (rangeError) {
+      setRows([]);
+      setLoading(false);
+      setMessage(rangeError);
       return;
     }
     setLoading(true);
@@ -48,9 +52,7 @@ export default function ClientsPage() {
     const { data, error } = await supabase.rpc('get_site_margin_report', { p_start: start, p_end: end });
     if (error) {
       setRows([]);
-      setMessage(error.message.includes('authorised') || error.message.includes('authentication')
-        ? 'Sign in with an authorised Ops, finance, admin or auditor account to view margin reporting.'
-        : 'Unable to load the margin report. No financial records were changed.');
+      setMessage(safeOpsError(error, 'Unable to load the margin report. No financial records were changed.'));
     } else setRows((data ?? []) as MarginRow[]);
     setLoading(false);
   }

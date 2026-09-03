@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { safeOpsError } from '../../lib/ops';
 
 const metrics = [
   { label: 'Open shifts', value: '42', sub: '11 starting today' },
@@ -45,9 +46,7 @@ export default function OpsDashboard() {
     let active = true;
     void supabase.rpc('get_management_cockpit', { p_as_of: new Date().toISOString() }).then(({ data, error }) => {
       if (!active) return;
-      if (error) setMessage(error.message.includes('authorised') || error.message.includes('authentication')
-        ? 'Sign in with an authorised Ops, finance, admin or auditor account to view live command-centre metrics.'
-        : 'Unable to load live command-centre metrics. No operational records were changed.');
+      if (error) setMessage(safeOpsError(error, 'Unable to load live command-centre metrics. No operational records were changed.'));
       else setCockpit((data ?? null) as Cockpit | null);
     });
     return () => { active = false; };

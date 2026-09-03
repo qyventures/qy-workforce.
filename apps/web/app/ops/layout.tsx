@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import OpsAccessGate from './access-gate';
 
 export const metadata: Metadata = {
   title: 'Operations | QY Workforce',
@@ -46,7 +47,7 @@ export default function OpsLayout({ children }: { children: ReactNode }) {
           </div>
         </nav>
       </header>
-      <main>{children}</main>
+      <main><OpsAccessGate>{children}</OpsAccessGate></main>
     </div>
   );
 }

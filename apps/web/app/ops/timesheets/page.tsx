@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
+import { safeOpsError } from '../../../lib/ops';
 
 type QueueRow = {
   timesheet_id: string;
@@ -55,15 +56,13 @@ export default function TimesheetQueue() {
     ]);
     const { data, error } = timesheetResult;
     if (error) {
-      setMessage(error.message.includes('JWT') || error.message.includes('authorised')
-        ? 'Sign in with an authorised supervisor or Ops account to view the live queue.'
-        : `Unable to load queue: ${error.message}`);
+      setMessage(safeOpsError(error, 'Unable to load the approval queue. No records were changed.'));
       setRows([]);
     } else {
       setRows((data ?? []) as QueueRow[]);
     }
     if (correctionResult.error) {
-      setMessage((current) => current || `Unable to load correction queue: ${correctionResult.error.message}`);
+      setMessage((current) => current || safeOpsError(correctionResult.error, 'Unable to load attendance corrections. No records were changed.'));
       setCorrections([]);
     } else {
       setCorrections((correctionResult.data ?? []) as CorrectionRow[]);
@@ -81,7 +80,7 @@ export default function TimesheetQueue() {
       p_decision: decision,
       p_review_note: note,
     });
-    if (error) setMessage(`Correction action failed: ${error.message}`);
+    if (error) setMessage(safeOpsError(error, 'Unable to review this attendance correction. No record was changed.'));
     else {
       setCorrections((current) => current.filter((row) => row.request_id !== id));
       setMessage(decision === 'approve' ? 'Attendance correction approved and draft timesheet refreshed.' : 'Attendance correction rejected.');
@@ -107,7 +106,7 @@ export default function TimesheetQueue() {
       p_rejection_reason: reason,
     });
     if (error) {
-      setMessage(`Action failed: ${error.message}`);
+      setMessage(safeOpsError(error, 'Unable to review this timesheet. No record was changed.'));
     } else {
       setRows((current) => current.filter((r) => r.timesheet_id !== id));
       setMessage(decision === 'approve' ? 'Timesheet approved and audit event recorded.' : 'Timesheet rejected and returned for correction.');

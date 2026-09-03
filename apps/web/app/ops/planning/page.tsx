@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
+import { safeOpsError } from '../../../lib/ops';
 
 type SlaRow = {
   client_id: string;
@@ -60,7 +61,7 @@ export default function PlanningPage() {
       ]);
       if (!active) return;
       if (slaResult.error || forecastResult.error) {
-        setMessage(slaResult.error?.message || forecastResult.error?.message || 'Unable to load planning data.');
+        setMessage(safeOpsError(slaResult.error || forecastResult.error, 'Unable to load planning data. No operational records were changed.'));
       } else {
         setSla((slaResult.data ?? []) as SlaRow[]);
         setForecast((forecastResult.data ?? []) as ForecastRow[]);

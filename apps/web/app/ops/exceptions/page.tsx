@@ -3,15 +3,13 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
+import { safeOpsError } from '../../../lib/ops';
 
 type Timesheet = { timesheet_id: string; exception_label: string; submitted_at: string };
 type Correction = { request_id: string; requested_at: string; site_name: string; worker_label: string };
 
 function errorMessage(error: { message: string } | null) {
-  if (!error) return '';
-  return error.message.includes('authorised') || error.message.includes('authentication')
-    ? 'Sign in with an authorised supervisor or Ops account to view live exceptions.'
-    : 'Unable to load live exceptions. No records were changed.';
+  return safeOpsError(error, 'Unable to load live exceptions. No records were changed.');
 }
 
 export default function ExceptionsPage() {

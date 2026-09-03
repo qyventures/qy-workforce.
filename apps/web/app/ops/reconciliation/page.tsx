@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
+import { safeOpsError, validateDateRange } from '../../../lib/ops';
 
 type CaseStatus = 'open' | 'investigating' | 'resolved' | 'dismissed';
 type CaseType = 'missing_payroll_item' | 'missing_payout' | 'missing_billing_item' | 'worker_amount_mismatch' | 'client_amount_mismatch' | 'payout_amount_mismatch';
@@ -56,7 +57,7 @@ export default function ReconciliationPage() {
       .select('id,timesheet_id,case_type,expected_amount,observed_amount,status,resolution_note,detected_at,updated_at')
       .order('status', { ascending: true })
       .order('detected_at', { ascending: false });
-    if (error) { setCases([]); setMessage(error.message.includes('permission') || error.message.includes('authori') ? 'Sign in with an authorised finance or admin account to view reconciliation cases.' : `Unable to load cases: ${error.message}`); }
+    if (error) { setCases([]); setMessage(safeOpsError(error, 'Unable to load reconciliation cases. No financial records were changed.')); }
     else setCases((data ?? []) as ReconciliationCase[]);
     setLoading(false);
   }
@@ -65,9 +66,11 @@ export default function ReconciliationPage() {
 
   async function sync() {
     if (!supabase || busy || !start || !end) return;
+    const rangeError = validateDateRange(start, end);
+    if (rangeError) { setMessage(rangeError); return; }
     setBusy(true); setMessage('');
     const { data, error } = await supabase.rpc('sync_financial_reconciliation_cases', { p_start: start, p_end: end });
-    if (error) setMessage(`Reconciliation scan failed: ${error.message}`);
+    if (error) setMessage(`Reconciliation scan failed. ${safeOpsError(error, 'No financial records were changed.')}`);
     else { setMessage(`${Number(data ?? 0)} new case(s) found. Existing cases were preserved.`); await load(); }
     setBusy(false);
   }
@@ -79,7 +82,7 @@ export default function ReconciliationPage() {
     if (note.length < 5 || note.length > 1000) { setMessage('A note between 5 and 1,000 characters is required.'); return; }
     setBusy(true); setMessage('');
     const { error } = await supabase.rpc('transition_financial_reconciliation_case', { p_case: item.id, p_status: status, p_note: note });
-    if (error) setMessage(`Case update failed: ${error.message}`);
+    if (error) setMessage(`Case update failed. ${safeOpsError(error, 'No case status was changed.')}`);
     else { setMessage(`Case marked ${status}. The change was audited.`); await load(); }
     setBusy(false);
   }

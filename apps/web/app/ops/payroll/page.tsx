@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
+import { safeOpsError } from '../../../lib/ops';
 
 type Batch = {
   id: string;
@@ -70,7 +71,7 @@ export default function PayrollPage() {
       .from('payroll_batches')
       .select('id,period_start,period_end,status,export_count,created_at')
       .order('created_at', { ascending: false });
-    if (error) setMessage(error.message);
+    if (error) setMessage(safeOpsError(error, 'Unable to load payroll batches. No records were changed.'));
     else setBatches((data ?? []) as Batch[]);
   }
 
@@ -81,7 +82,7 @@ export default function PayrollPage() {
     setBusy(true); setMessage('');
     const { error } = await supabase.rpc('create_payroll_batch', { p_start: start, p_end: end });
     setBusy(false);
-    if (error) setMessage(error.message);
+    if (error) setMessage(safeOpsError(error, 'Unable to create the payroll batch. No records were changed.'));
     else { setMessage('Draft payroll batch created.'); void load(); }
   }
 
@@ -90,7 +91,7 @@ export default function PayrollPage() {
     setBusy(true); setMessage('');
     const { error } = await supabase.rpc('lock_payroll_batch', { p_batch: id });
     setBusy(false);
-    if (error) setMessage(error.message);
+    if (error) setMessage(safeOpsError(error, 'Unable to lock the payroll batch. No records were changed.'));
     else { setMessage('Batch locked. It can now be exported.'); void load(); }
   }
 
@@ -105,7 +106,7 @@ export default function PayrollPage() {
     setBusy(true); setMessage('');
     const { error } = await supabase.rpc('cancel_payroll_batch', { p_batch: batch.id, p_reason: reason });
     setBusy(false);
-    if (error) setMessage(error.message.includes('only a draft') ? 'This batch is no longer a draft. Refresh and review its current status.' : error.message);
+    if (error) setMessage(error.message.includes('only a draft') ? 'This batch is no longer a draft. Refresh and review its current status.' : safeOpsError(error, 'Unable to cancel this draft. No records were changed.'));
     else { setMessage('Draft cancelled. Its timesheets are available for a new payroll batch and the reason was audited.'); void load(); }
   }
 
@@ -113,7 +114,7 @@ export default function PayrollPage() {
     if (!supabase) return;
     setBusy(true); setMessage('');
     const { data, error } = await supabase.rpc('get_payroll_export', { p_batch: batch.id });
-    if (error) { setBusy(false); setMessage(error.message); return; }
+    if (error) { setBusy(false); setMessage(safeOpsError(error, 'Unable to prepare the payroll export. No file was created.')); return; }
 
     const rows = (data ?? []) as ExportRow[];
     const header = ['timesheet_id','worker_reference','worker_name','shift_date','site_name','payable_minutes','gross_pay','currency'];
@@ -127,7 +128,7 @@ export default function PayrollPage() {
       p_checksum: checksum,
       p_count: rows.length,
     });
-    if (audit.error) { setBusy(false); setMessage(audit.error.message); return; }
+    if (audit.error) { setBusy(false); setMessage(safeOpsError(audit.error, 'The export audit could not be recorded, so no file was downloaded.')); return; }
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -146,7 +147,7 @@ export default function PayrollPage() {
     setBusy(true); setMessage('');
     const { data, error } = await supabase.rpc('get_worker_payout_control_queue', { p_batch: batch.id });
     setBusy(false);
-    if (error) { setMessage(error.message); return; }
+    if (error) { setMessage(safeOpsError(error, 'Unable to load payout controls. No records were changed.')); return; }
     setSelectedBatch(batch);
     setPayouts((data ?? []) as Payout[]);
   }
@@ -156,7 +157,7 @@ export default function PayrollPage() {
     setBusy(true); setMessage('');
     const { data, error } = await supabase.rpc('prepare_worker_payouts', { p_batch: batch.id });
     setBusy(false);
-    if (error) { setMessage(error.message); return; }
+    if (error) { setMessage(safeOpsError(error, 'Unable to prepare worker payouts. No records were changed.')); return; }
     setMessage(`${Number(data ?? 0)} payout records prepared. A different finance user must approve them.`);
     await loadPayouts(batch);
   }
@@ -186,7 +187,7 @@ export default function PayrollPage() {
       p_method: method, p_exception_reason: exceptionReason,
     });
     setBusy(false);
-    if (error) setMessage(error.message.includes('preparer cannot approve') ? 'Dual control: another finance user must approve this payout.' : error.message);
+    if (error) setMessage(error.message.includes('preparer cannot approve') ? 'Dual control: another finance user must approve this payout.' : safeOpsError(error, 'Unable to update this payout. No status was changed.'));
     else if (selectedBatch) { setMessage(`Payout moved to ${status}. The transition was audited.`); await loadPayouts(selectedBatch); }
   }
 

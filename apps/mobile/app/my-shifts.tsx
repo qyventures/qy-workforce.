@@ -67,6 +67,18 @@ export default function MyShiftsScreen() {
 
   async function submitTimesheet(assignmentId: string) {
     if (!supabase) { Alert.alert('Demo mode', 'Timesheet submission will be enabled after staging is connected.'); return; }
+    Alert.alert(
+      'Submit timesheet?',
+      'Submit your recorded payable time for supervisor approval? Check the attendance details first; submitted timesheets may require an operations correction to change.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Submit', onPress: () => void confirmSubmitTimesheet(assignmentId) },
+      ],
+    );
+  }
+
+  async function confirmSubmitTimesheet(assignmentId: string) {
+    if (!supabase) return;
     setSubmitting(assignmentId); setError(null);
     try {
       const { error: rpcError } = await supabase.rpc('submit_timesheet', { p_assignment_id: assignmentId });

@@ -94,6 +94,18 @@ export default function ShiftsScreen() {
       Alert.alert('Demo mode', 'Connect a staging Supabase project to accept a live shift.');
       return;
     }
+    Alert.alert(
+      'Accept this shift?',
+      `${shift.role}\n${formatShiftTime(shift.startsAt, shift.endsAt)}\n${shift.site}\nS$${shift.rate.toFixed(2)}/hr`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Accept shift', onPress: () => void confirmAcceptShift(shift) },
+      ],
+    );
+  };
+
+  const confirmAcceptShift = async (shift: Shift) => {
+    if (!supabase) return;
     setAcceptingId(shift.id);
     const { data: assignmentId, error } = await supabase.rpc('accept_shift', { p_shift_id: shift.id });
     setAcceptingId(null);

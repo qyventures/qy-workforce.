@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../lib/supabase';
 
@@ -108,6 +108,19 @@ export default function AssignmentScreen() {
   const estimatedScheduledPay = shift.worker_rate == null ? null : durationMinutes / 60 * Number(shift.worker_rate);
   const cancelled = item.cancelled_at !== null || shift.status === 'cancelled';
 
+  const openDirections = async () => {
+    const address = shift.sites?.address;
+    if (!address) return;
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    try {
+      if (await Linking.canOpenURL(url)) await Linking.openURL(url);
+      else throw new Error('Maps unavailable');
+    } catch {
+      // Keep the worker in the app if no map handler is installed.
+      setError('Maps is not available on this device. Use the site address shown above.');
+    }
+  };
+
   return <ScrollView
     contentContainerStyle={styles.container}
     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} />}
@@ -125,6 +138,7 @@ export default function AssignmentScreen() {
       <Text style={styles.value}>{start.toLocaleString()} – {end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
       <Text style={styles.label}>Location</Text>
       <Text style={styles.value}>{shift.sites?.address ?? 'Address will be provided by operations.'}</Text>
+      {shift.sites?.address && <Pressable accessibilityRole="button" accessibilityLabel="Open worksite address in maps" style={styles.mapButton} onPress={() => void openDirections()}><Text style={styles.mapButtonText}>Open in Maps</Text></Pressable>}
       <Text style={styles.label}>Rate</Text>
       <Text style={styles.value}>{shift.worker_rate == null ? 'Rate pending' : `S$${Number(shift.worker_rate).toFixed(2)} / hr`}</Text>
       {estimatedScheduledPay != null && <Text style={styles.helper}>Scheduled-shift estimate: S${estimatedScheduledPay.toFixed(2)}. Final pay follows approved payable time.</Text>}
@@ -163,6 +177,8 @@ const styles = StyleSheet.create({
   badge: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase' },
   primary: { borderRadius: 14, padding: 15, backgroundColor: '#111', alignItems: 'center', minWidth: 180 },
   primaryText: { color: '#fff', fontWeight: '800' },
+  mapButton: { borderWidth: 1, borderColor: '#D0D5DD', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 2, minHeight: 44, justifyContent: 'center' },
+  mapButtonText: { color: '#344054', fontWeight: '800' },
   muted: { color: '#68707b', textAlign: 'center' },
   errorTitle: { fontSize: 20, fontWeight: '800' },
   warning: { backgroundColor: '#fff7ed', borderRadius: 12, padding: 12 },

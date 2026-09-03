@@ -56,6 +56,14 @@ export default function WorkersPage() {
       <button disabled={state==='sending'} style={buttonStyle}>{state==='sending'?'Submitting…':'Register for gig work'}</button>
       {state==='error' && <p role="alert" aria-live="assertive" style={{color:'#B42318',margin:0}}>We could not submit your interest. Please check the required fields and try again.</p>}
     </form></>}</div>
+    </section>
+    <section aria-labelledby="worker-next-heading" style={{maxWidth:1120,margin:'0 auto',padding:'0 24px 72px'}}>
+      <div style={{background:'#fff',border:'1px solid #EAECF0',borderRadius:16,padding:'24px clamp(20px,4vw,32px)'}}>
+        <h2 id="worker-next-heading" style={{margin:'0 0 10px',fontSize:23}}>What happens after you register?</h2>
+        <div className="journey-grid" style={{marginTop:18}}>
+          {['We review your interests, availability and preferred locations.','We may contact you to clarify your experience or role preferences.','Any opportunity includes its own role, site and shift details.','Eligibility and onboarding are completed before any deployment.'].map((item, index) => <div key={item} style={{display:'flex',gap:12,color:'#475467',lineHeight:1.5}}><span aria-hidden="true" style={{width:24,height:24,flex:'0 0 24px',display:'grid',placeItems:'center',borderRadius:'50%',background:'#F2F4F7',color:'#101828',fontWeight:800}}>{index + 1}</span>{item}</div>)}
+        </div>
+      </div>
     </section><SiteFooter /><ConsentBanner />
   </main>;
 }

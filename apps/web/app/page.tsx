@@ -27,6 +27,11 @@ export default function HomePage() {
         </div>
       </div></section>
 
+      <section aria-label="Pilot commitments" style={{borderBottom:'1px solid #EAECF0',background:'#fff'}}><div style={{maxWidth:1180,margin:'0 auto',padding:'18px 24px',display:'flex',gap:18,justifyContent:'space-between',flexWrap:'wrap',color:'#475467',fontSize:14}}>
+        <span><strong style={{color:'#101828'}}>Pilot-ready by design</strong> · every request is reviewed before a booking</span>
+        <span>Consent-led contact · no sensitive documents in public forms · optional anonymous analytics</span>
+      </div></section>
+
       <section style={{maxWidth:1180, margin:'0 auto', padding:'72px 24px'}}>
         <p style={{color:'#475467', fontSize:13, fontWeight:800, letterSpacing:1.4}}>INDUSTRIES WE SUPPORT</p>
         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:12}}>
@@ -40,6 +45,15 @@ export default function HomePage() {
         <p style={{fontSize:18, lineHeight:1.6, color:'#475467', maxWidth:760}}>Share your role, timing and site requirements. Eligible workers can be matched to operational needs, with attendance and timesheet workflows designed for visibility.</p>
         <ConversionLink href="/employers" event="home_employer_detail_cta" style={{color:'#101828',fontWeight:750}}>Request manpower →</ConversionLink>
       </div></section>
+
+      <section aria-labelledby="journey-heading" style={{maxWidth:1180,margin:'0 auto',padding:'72px 24px'}}>
+        <p style={{color:'#475467',fontSize:13,fontWeight:800,letterSpacing:1.4}}>START WITH THE RIGHT PATH</p>
+        <h2 id="journey-heading" style={{fontSize:42,letterSpacing:'-.04em',margin:'12px 0 26px'}}>A clear next step for both sides.</h2>
+        <div className="journey-grid">
+          <article style={{border:'1px solid #EAECF0',borderRadius:16,padding:24,background:'#fff'}}><p style={{margin:'0 0 8px',fontWeight:800,color:'#667085',fontSize:13}}>FOR EMPLOYERS</p><h3 style={{margin:'0 0 10px',fontSize:23}}>Need people for a shift?</h3><p style={{color:'#475467',lineHeight:1.6,margin:'0 0 18px'}}>Share the site, timing and headcount. We’ll clarify requirements before discussing a deployment.</p><ConversionLink href="/employers" event="home_journey_employer" style={{color:'#101828',fontWeight:800}}>Request manpower →</ConversionLink></article>
+          <article style={{border:'1px solid #EAECF0',borderRadius:16,padding:24,background:'#fff'}}><p style={{margin:'0 0 8px',fontWeight:800,color:'#667085',fontSize:13}}>FOR WORKERS</p><h3 style={{margin:'0 0 10px',fontSize:23}}>Looking for flexible work?</h3><p style={{color:'#475467',lineHeight:1.6,margin:'0 0 18px'}}>Tell us your interests, availability and preferred locations. Any opportunity is reviewed separately before acceptance.</p><ConversionLink href="/workers" event="home_journey_worker" style={{color:'#101828',fontWeight:800}}>Register interest →</ConversionLink></article>
+        </div>
+      </section>
 
       <section id="workers" style={{maxWidth:1180, margin:'0 auto', padding:'72px 24px 80px'}}>
         <h2 style={{fontSize:42, marginBottom:16}}>One profile. More ways to work.</h2>

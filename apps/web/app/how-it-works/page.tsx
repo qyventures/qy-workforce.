@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ConsentBanner, SiteFooter, SiteHeader } from '../components/site-shell';
+import { ConsentBanner, ConversionLink, SiteFooter, SiteHeader } from '../components/site-shell';
 
 export const metadata: Metadata = {
   title: 'How it works | QY Workforce',
@@ -24,8 +24,12 @@ export default function HowItWorks() {
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:14,marginTop:46}}>
         {steps.map(([n,t,d])=><article key={n} style={{border:'1px solid #27344A',borderRadius:18,padding:22,background:'#111B2D'}}><div style={{color:'#8EA2FF',fontWeight:900}}>{n}</div><h2 style={{fontSize:19,margin:'24px 0 9px'}}>{t}</h2><p style={{color:'#AAB5C6',lineHeight:1.55,fontSize:14,margin:0}}>{d}</p></article>)}
       </div>
-      <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:38}}><Link href="/employers" style={{background:'#fff',color:'#111827',padding:'13px 18px',borderRadius:10,textDecoration:'none',fontWeight:800}}>Hire workers</Link><Link href="/workers" style={{border:'1px solid #3C4A61',color:'#fff',padding:'13px 18px',borderRadius:10,textDecoration:'none',fontWeight:800}}>Find shifts</Link></div>
+      <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:38}}><ConversionLink href="/employers" event="how_it_works_employer_cta" style={{background:'#fff',color:'#111827',padding:'13px 18px',borderRadius:10,textDecoration:'none',fontWeight:800}}>Hire workers</ConversionLink><ConversionLink href="/workers" event="how_it_works_worker_cta" style={{border:'1px solid #3C4A61',color:'#fff',padding:'13px 18px',borderRadius:10,textDecoration:'none',fontWeight:800}}>Find shifts</ConversionLink></div>
       <section aria-labelledby="controls-heading" style={{marginTop:76,borderTop:'1px solid #27344A',paddingTop:42}}><h2 id="controls-heading" style={{fontSize:30,margin:'0 0 14px'}}>Designed for accountable handoffs.</h2><p style={{color:'#B9C2D0',lineHeight:1.65,maxWidth:720}}>Public forms collect only what is needed to start a conversation. Readiness checks, site requirements, attendance exceptions and approvals belong in the relevant service workflow.</p><Link href="/privacy" style={{color:'#fff',fontWeight:750}}>See privacy and data choices →</Link></section>
+      <section aria-labelledby="pilot-controls-heading" style={{marginTop:52,display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))',gap:12}}>
+        <h2 id="pilot-controls-heading" style={{position:'absolute',width:1,height:1,overflow:'hidden',clipPath:'inset(50%)'}}>Pilot controls</h2>
+        {['Consent before follow-up','No sensitive documents in public forms','Shift details confirmed before acceptance','Optional analytics with no advertising cookies'].map((item) => <div key={item} style={{border:'1px solid #27344A',borderRadius:14,padding:18,color:'#D0D5DD',fontSize:14,lineHeight:1.45}}>{item}</div>)}
+      </section>
     </section><SiteFooter /><ConsentBanner />
   </main>
 }

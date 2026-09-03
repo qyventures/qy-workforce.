@@ -12,12 +12,21 @@ export function SiteHeader() {
       <a href="#main-content" style={{ position: 'absolute', left: -9999, top: 8, zIndex: 30, background: '#101828', color: '#fff', padding: '10px 14px', borderRadius: 8 }}>Skip to content</a>
       <nav aria-label="Primary navigation" style={{ maxWidth: 1180, margin: '0 auto', minHeight: 68, padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
         <Link href="/" style={{ color: '#101828', textDecoration: 'none', fontWeight: 850, letterSpacing: '.08em', fontSize: 14 }}>QY WORKFORCE</Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+        <div className="site-nav-links">
           <Link href="/how-it-works" style={linkStyle}>How it works</Link>
           <Link href="/industries" style={linkStyle}>Industries</Link>
           <Link href="/workers" style={linkStyle}>Find shifts</Link>
           <Link href="/employers" style={{ background: '#101828', color: '#fff', textDecoration: 'none', borderRadius: 8, padding: '10px 13px', fontWeight: 750, fontSize: 14 }}>Hire workers</Link>
         </div>
+        <details className="site-mobile-menu">
+          <summary>Menu</summary>
+          <div className="site-mobile-links">
+            <Link href="/how-it-works">How it works</Link>
+            <Link href="/industries">Industries</Link>
+            <Link href="/workers">Find shifts</Link>
+            <Link href="/employers">Hire workers</Link>
+          </div>
+        </details>
       </nav>
     </header>
   );
@@ -46,7 +55,9 @@ export function trackConversion(event: string) {
   const endpoint = process.env.NEXT_PUBLIC_ANALYTICS_ENDPOINT;
   if (!endpoint) return;
   const payload = JSON.stringify({ event, path: window.location.pathname, at: new Date().toISOString() });
-  navigator.sendBeacon?.(endpoint, new Blob([payload], { type: 'application/json' }));
+  const body = new Blob([payload], { type: 'application/json' });
+  if (navigator.sendBeacon) navigator.sendBeacon(endpoint, body);
+  else void fetch(endpoint, { method: 'POST', body, keepalive: true, headers: { 'content-type': 'application/json' } }).catch(() => undefined);
 }
 
 export function ConversionLink({ href, event, children, style }: { href: string; event: string; children: ReactNode; style?: CSSProperties }) {
@@ -58,6 +69,9 @@ export function ConsentBanner() {
   useEffect(() => {
     try { setChoice(localStorage.getItem('qy-analytics-consent')); } catch { setChoice('declined'); }
   }, []);
+  useEffect(() => {
+    if (choice === 'granted') trackConversion('page_view');
+  }, [choice]);
   if (choice) return null;
   const choose = (value: 'granted' | 'declined') => {
     try { localStorage.setItem('qy-analytics-consent', value); } catch { /* The preference still applies for this visit. */ }

@@ -1,0 +1,18 @@
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { overflow-x: hidden; }
+button, input, textarea, select { font: inherit; }
+.site-nav-links { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.site-mobile-menu { display: none; }
+.site-mobile-menu summary { cursor: pointer; list-style: none; border: 1px solid #D0D5DD; border-radius: 8px; padding: 9px 11px; font-weight: 750; color: #344054; }
+.site-mobile-menu summary::-webkit-details-marker { display: none; }
+.site-mobile-menu[open] summary { background: #F2F4F7; }
+.site-mobile-links { display: grid; gap: 12px; padding: 14px 0 2px; width: 100%; }
+.site-mobile-links a { color: #344054; text-decoration: none; font-weight: 700; padding: 8px 0; }
+.journey-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 640px) {
+  .site-nav-links { display: none; }
+  .site-mobile-menu { display: block; }
+  .journey-grid { grid-template-columns: 1fr; }
+}

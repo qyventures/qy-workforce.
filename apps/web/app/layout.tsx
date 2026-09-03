@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import React from 'react';
+import './globals.css';
 
 const canonicalSiteUrl = 'https://qyworkforce.com';
 
@@ -20,6 +21,8 @@ export const metadata: Metadata = {
   twitter: { card: 'summary_large_image', title: 'QY Workforce | Flexible staffing for Singapore', description: 'Flexible staffing, clear expectations and operational visibility for employers and workers.' },
   robots: { index: true, follow: true },
   category: 'staffing',
+  keywords: ['casual staffing Singapore', 'flexible manpower Singapore', 'event crew', 'F&B staffing', 'gig work'],
+  creator: 'QY Workforce',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -10,9 +10,13 @@ button, input, textarea, select { font: inherit; }
 .site-mobile-menu[open] summary { background: #F2F4F7; }
 .site-mobile-links { display: grid; gap: 12px; padding: 14px 0 2px; width: 100%; }
 .site-mobile-links a { color: #344054; text-decoration: none; font-weight: 700; padding: 8px 0; }
+.site-mobile-links { background: #fff; }
 .journey-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+button:disabled { cursor: wait; opacity: .7; }
 @media (max-width: 640px) {
   .site-nav-links { display: none; }
   .site-mobile-menu { display: block; }
   .journey-grid { grid-template-columns: 1fr; }
+  .site-mobile-menu[open] { width: 100%; }
+  .site-mobile-links a { border-bottom: 1px solid #EAECF0; }
 }

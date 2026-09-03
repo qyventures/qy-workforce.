@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import React from 'react';
 import './globals.css';
 
-const canonicalSiteUrl = 'https://qyworkforce.com';
+const canonicalSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://qyworkforce.com';
 
 export const metadata: Metadata = {
   title: 'QY Workforce | Flexible staffing for Singapore',
@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   category: 'staffing',
   keywords: ['casual staffing Singapore', 'flexible manpower Singapore', 'event crew', 'F&B staffing', 'gig work'],
   creator: 'QY Workforce',
+  other: { 'format-detection': 'telephone=no' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -13,6 +13,7 @@ export default function HomePage() {
     <main id="main-content" style={{ background:'#fff', minHeight:'100vh' }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([
         { '@context': 'https://schema.org', '@type': 'Organization', name: 'QY Workforce', url: 'https://qyworkforce.com', description: 'Flexible staffing for Singapore employers and workers.' },
+        { '@context': 'https://schema.org', '@type': 'WebSite', name: 'QY Workforce', url: 'https://qyworkforce.com', inLanguage: 'en-SG' },
         { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map(([question, answer]) => ({ '@type': 'Question', name: question, acceptedAnswer: { '@type': 'Answer', text: answer } })) },
       ]) }} />
       <SiteHeader />

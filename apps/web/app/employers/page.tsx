@@ -56,7 +56,7 @@ export default function EmployersPage() {
       <label style={labelStyle}>Other requirements <span style={{fontWeight:400}}>(optional)</span><textarea name="requirements" placeholder="Shift hours, certifications or other notes" maxLength={1000} rows={4} style={field}/></label>
       <label style={consentStyle}><input required type="checkbox" name="pdpaConsent"/> <span>I consent to QY Workforce using these details to respond to and manage this manpower enquiry, in line with the <a href="/privacy">Privacy Notice</a>.</span></label>
       <label style={consentStyle}><input type="checkbox" name="whatsappConsent"/> <span>I agree to be contacted on WhatsApp about this enquiry, including by an automated qualification assistant. I can ask to stop messages at any time.</span></label>
-      <button disabled={state==='sending'} style={buttonStyle}>{state==='sending'?'Submitting…':'Request flexible workers'}</button>
+      <button type="submit" disabled={state==='sending'} style={buttonStyle}>{state==='sending'?'Submitting…':'Request flexible workers'}</button>
       {state==='error' && <p role="alert" aria-live="assertive" style={{color:'#B42318',margin:0}}>We could not submit this enquiry. Please check the required fields and try again.</p>}
     </form></>}</div>
     </section>

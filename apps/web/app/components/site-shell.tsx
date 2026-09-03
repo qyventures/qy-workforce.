@@ -37,10 +37,18 @@ export function SiteFooter() {
     <footer style={{ borderTop: '1px solid #EAECF0', background: '#fff' }}>
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 24px', display: 'flex', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', color: '#667085', fontSize: 13 }}>
         <span>© {new Date().getFullYear()} QY Workforce</span>
-        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}><Link href="/privacy" style={linkStyle}>Privacy</Link><Link href="/terms" style={linkStyle}>Terms</Link><Link href="/how-it-works" style={linkStyle}>How it works</Link></div>
+        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}><Link href="/privacy" style={linkStyle}>Privacy</Link><Link href="/terms" style={linkStyle}>Terms</Link><Link href="/how-it-works" style={linkStyle}>How it works</Link><PrivacySettingsButton /></div>
       </div>
     </footer>
   );
+}
+
+export function PrivacySettingsButton() {
+  const reset = () => {
+    try { localStorage.removeItem('qy-analytics-consent'); } catch { /* The banner can still be reopened for this visit. */ }
+    window.dispatchEvent(new Event('qy-privacy-reset'));
+  };
+  return <button type="button" onClick={reset} style={{ border: 0, padding: 0, background: 'transparent', color: '#475467', textDecoration: 'underline', cursor: 'pointer', fontWeight: 650, fontSize: 14 }}>Privacy choices</button>;
 }
 
 /**
@@ -68,6 +76,9 @@ export function ConsentBanner() {
   const [choice, setChoice] = useState<string | null>(null);
   useEffect(() => {
     try { setChoice(localStorage.getItem('qy-analytics-consent')); } catch { setChoice('declined'); }
+    const reopen = () => setChoice(null);
+    window.addEventListener('qy-privacy-reset', reopen);
+    return () => window.removeEventListener('qy-privacy-reset', reopen);
   }, []);
   useEffect(() => {
     if (choice === 'granted') trackConversion('page_view');

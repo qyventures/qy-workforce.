@@ -20,7 +20,7 @@ export default function HowItWorks() {
     <section style={{maxWidth:1050,margin:'0 auto',padding:'72px 24px'}}>
       <div style={{marginTop:42,color:'#8EA2FF',fontWeight:800,fontSize:12,letterSpacing:1.4}}>HOW IT WORKS</div>
       <h1 style={{fontSize:'clamp(38px,6vw,72px)',lineHeight:1.02,letterSpacing:'-.045em',maxWidth:850,margin:'10px 0 18px'}}>Flexible staffing with operational control built in.</h1>
-      <p style={{color:'#B9C2D0',fontSize:18,lineHeight:1.6,maxWidth:720}}>A single workflow for worker readiness, matching, attendance, approvals and payroll handoff.</p>
+      <p style={{color:'#B9C2D0',fontSize:18,lineHeight:1.6,maxWidth:720}}>A single workflow for worker readiness, matching, attendance, approvals and payroll handoff. Public enquiries are the starting point; every deployment is confirmed separately.</p>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:14,marginTop:46}}>
         {steps.map(([n,t,d])=><article key={n} style={{border:'1px solid #27344A',borderRadius:18,padding:22,background:'#111B2D'}}><div style={{color:'#8EA2FF',fontWeight:900}}>{n}</div><h2 style={{fontSize:19,margin:'24px 0 9px'}}>{t}</h2><p style={{color:'#AAB5C6',lineHeight:1.55,fontSize:14,margin:0}}>{d}</p></article>)}
       </div>

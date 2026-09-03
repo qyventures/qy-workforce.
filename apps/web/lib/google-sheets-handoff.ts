@@ -1,4 +1,5 @@
 import { createSign } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
 const SPREADSHEET_ID = '1dNf2Iu_Sk6y7bJ8x3FcC2cyD9dRqIqm1aAsLhDa-CC8';
 const SHEET_TAB = 'Leads';
@@ -21,8 +22,18 @@ function assertion(email:string,key:string){
 export type EmployerSheetLead = { created_at:string; source:string; campaign:string; contact_name:string; company_name:string; phone:string; email:string; whatsapp_consent_at:string|null; consent_at:string; deployment_timeline?:string|null; roles_headcount?:string|null; location?:string|null; requirements?:string|null; ai_summary?:string|null; lead_score?:number|null; qualification_status?:string|null; next_action?:string|null; follow_up_at?:string|null; conversation_id?:string|null; };
 
 export function createEmployerLeadSheetClient(){
-  const configuredEmail=process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const configuredKey=process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g,'\n');
+  let configuredEmail=process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  let configuredKey=process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g,'\n');
+  const credentialsFile=process.env.GOOGLE_SERVICE_ACCOUNT_FILE;
+  if((!configuredEmail||!configuredKey)&&credentialsFile){
+    try {
+      const parsed=JSON.parse(readFileSync(credentialsFile,'utf8')) as {client_email?:string;private_key?:string};
+      configuredEmail=parsed.client_email;
+      configuredKey=parsed.private_key;
+    } catch {
+      throw new Error('Google Sheets service-account file could not be read');
+    }
+  }
   if(!configuredEmail||!configuredKey) throw new Error('Google Sheets service-account credentials are not configured');
   const serviceAccountEmail:string=configuredEmail;
   const privateKey:string=configuredKey;

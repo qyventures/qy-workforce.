@@ -5,6 +5,7 @@ import { createEmployerLeadSheetClient } from '../../../lib/google-sheets-handof
 type LeadType = 'employer' | 'worker';
 
 const MAX_REQUEST_BYTES = 16 * 1024;
+const PRODUCTION_ORIGINS = new Set(['https://qyworkforce.com', 'https://www.qyworkforce.com']);
 
 function text(value: unknown, max: number) {
   if (typeof value !== 'string') return null;
@@ -44,12 +45,17 @@ export async function POST(request: NextRequest) {
   if (origin) {
     let requestOrigin: string;
     try { requestOrigin = new URL(origin).origin; } catch { return jsonResponse({ ok: false }, 403); }
-    if (requestOrigin !== request.nextUrl.origin) return jsonResponse({ ok: false }, 403);
+    const allowed = process.env.NODE_ENV === 'production'
+      ? PRODUCTION_ORIGINS
+      : new Set([...PRODUCTION_ORIGINS, request.nextUrl.origin]);
+    if (!allowed.has(requestOrigin)) return jsonResponse({ ok: false }, 403);
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) return jsonResponse({ ok: false, message: 'Enquiries are temporarily unavailable.' }, 503);
+  const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const databaseKey = serviceKey ?? publishableKey;
+  if (!url || !databaseKey) return jsonResponse({ ok: false, message: 'Enquiries are temporarily unavailable.' }, 503);
 
   let body: Record<string, unknown>;
   try { body = await request.json(); } catch { return jsonResponse({ ok: false }, 400); }
@@ -62,9 +68,11 @@ export async function POST(request: NextRequest) {
   const phone = validPhone(body.phone);
   if (!pdpaConsent || !email || !phone || (type !== 'employer' && type !== 'worker')) return jsonResponse({ ok: false, message: 'Please complete the required fields.' }, 400);
 
-  const supabase = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const supabase = createClient(url, databaseKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const now = new Date().toISOString();
   let leadId: string | null = null;
+  let sheetSyncToken: string | null = null;
+  let qualificationAlreadyQueued = false;
 
   if (type === 'employer') {
     const companyName = text(body.companyName, 160);
@@ -77,15 +85,33 @@ export async function POST(request: NextRequest) {
     const source = text(body.source, 80) ?? 'website_employer';
     const campaign = text(body.campaign, 120) ?? 'meta_employer_flexible_worker_preview';
     const requirements = text(body.requirements, 1000);
-    const { data, error } = await supabase.from('employer_leads').insert({
-      company_name: companyName, contact_name: contactName, email, phone,
-      deployment_timeline: deploymentTimeline, roles_headcount: rolesHeadcount, location,
-      requirements, manpower_need: requirements ?? rolesHeadcount,
-      consent_at: now, whatsapp_consent_at: whatsappConsent ? now : null,
-      source, campaign, qualification_status: whatsappConsent ? 'queued' : 'new',
-    }).select('id').single();
-    if (error || !data?.id) return jsonResponse({ ok: false, message: 'Unable to submit right now.' }, 500);
-    leadId = data.id;
+
+    if (serviceKey) {
+      const { data, error } = await supabase.from('employer_leads').insert({
+        company_name: companyName, contact_name: contactName, email, phone,
+        deployment_timeline: deploymentTimeline, roles_headcount: rolesHeadcount, location,
+        requirements, manpower_need: requirements ?? rolesHeadcount,
+        consent_at: now, whatsapp_consent_at: whatsappConsent ? now : null,
+        source, campaign, qualification_status: whatsappConsent ? 'queued' : 'new',
+      }).select('id').single();
+      if (error || !data?.id) return jsonResponse({ ok: false, message: 'Unable to submit right now.' }, 500);
+      leadId = data.id;
+    } else {
+      const { data, error } = await supabase.rpc('submit_employer_lead_public', {
+        p_company_name: companyName,
+        p_contact_name: contactName,
+        p_email: email,
+        p_phone: phone,
+        p_manpower_request: requirements ?? rolesHeadcount,
+        p_source: source,
+        p_campaign: campaign,
+        p_whatsapp_consent: whatsappConsent,
+      });
+      if (error || !data?.lead_id || !data?.sheet_sync_token) return jsonResponse({ ok: false, message: 'Unable to submit right now.' }, 500);
+      leadId = data.lead_id as string;
+      sheetSyncToken = data.sheet_sync_token as string;
+      qualificationAlreadyQueued = data.qualification_queued === true;
+    }
 
     try {
       const sheet = createEmployerLeadSheetClient();
@@ -95,12 +121,21 @@ export async function POST(request: NextRequest) {
         deployment_timeline: deploymentTimeline, roles_headcount: rolesHeadcount, location, requirements,
         qualification_status: whatsappConsent ? 'queued' : 'new', next_action: 'BD review and follow-up',
       });
-      await supabase.from('employer_leads').update({ sheet_sync_status: 'synced', sheet_synced_at: now, sheet_sync_error: null }).eq('id', leadId);
+      if (serviceKey) {
+        await supabase.from('employer_leads').update({ sheet_sync_status: 'synced', sheet_synced_at: now, sheet_sync_error: null }).eq('id', leadId);
+      } else if (sheetSyncToken) {
+        await supabase.rpc('mark_employer_lead_sheet_sync_public', { p_lead_id: leadId, p_sync_token: sheetSyncToken, p_status: 'synced', p_error: null });
+      }
     } catch (sheetError) {
       const msg = sheetError instanceof Error ? sheetError.message.slice(0, 500) : 'Google Sheet sync failed';
-      await supabase.from('employer_leads').update({ sheet_sync_status: 'pending_retry', sheet_sync_error: msg }).eq('id', leadId);
+      if (serviceKey) {
+        await supabase.from('employer_leads').update({ sheet_sync_status: 'pending_retry', sheet_sync_error: msg }).eq('id', leadId);
+      } else if (sheetSyncToken) {
+        await supabase.rpc('mark_employer_lead_sheet_sync_public', { p_lead_id: leadId, p_sync_token: sheetSyncToken, p_status: 'pending_retry', p_error: msg });
+      }
     }
   } else {
+    if (!serviceKey) return jsonResponse({ ok: false, message: 'Worker enquiries are temporarily unavailable.' }, 503);
     const fullName = text(body.fullName, 120);
     const workInterest = text(body.workInterest, 200);
     const availability = text(body.availability, 500);
@@ -117,7 +152,7 @@ export async function POST(request: NextRequest) {
     leadId = data.id;
   }
 
-  if (whatsappConsent && leadId) {
+  if (whatsappConsent && leadId && !qualificationAlreadyQueued) {
     const { error: queueError } = await supabase.from('lead_qualification_queue').insert({ lead_type: type, lead_id: leadId, channel: 'whatsapp', sender: '+6580227816', status: 'queued' });
     if (queueError) return jsonResponse({ ok: true, qualificationQueued: false });
   }

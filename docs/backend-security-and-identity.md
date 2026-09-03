@@ -40,7 +40,7 @@ Approved worker availability exceptions are part of the authoritative matching b
 
 ## Attendance and timesheets
 
-Clock events are tied to an accepted assignment and validated server-side against the authoritative site geofence and timing window. Clock-out creates/updates a draft timesheet. Supervisor/Ops review is site-scoped and produces auditable approve/reject transitions.
+Clock events are tied to an accepted assignment and validated server-side against the authoritative site geofence and timing window. The attendance RPC also requires non-cancelled demand plus active client/site configuration, and treats any device identifier as a bounded opaque hash. Clock-out remains available within the recovery window for an active assignment. Clock-out creates/updates a draft timesheet. Supervisor/Ops review is site-scoped and produces auditable approve/reject transitions.
 
 Authenticated clients no longer have direct INSERT/UPDATE/DELETE privileges on `time_events` or `timesheets`; attendance and timesheet state changes must use the audited server RPCs. This prevents a modified client from fabricating geofence outcomes, payable minutes or approval/payroll state through direct table writes.
 

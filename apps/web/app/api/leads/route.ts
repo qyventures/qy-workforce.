@@ -136,21 +136,32 @@ export async function POST(request: NextRequest) {
       }
     }
   } else {
-    if (!serviceKey) return jsonResponse({ ok: false, message: 'Worker enquiries are temporarily unavailable.' }, 503);
     const fullName = text(body.fullName, 120);
     const workInterest = text(body.workInterest, 200);
     const availability = text(body.availability, 500);
     const preferredLocations = text(body.preferredLocations, 300);
     if (!fullName || !workInterest || !availability || !preferredLocations) return jsonResponse({ ok: false, message: 'Please complete the required fields.' }, 400);
 
-    const { data, error } = await supabase.from('worker_interest_leads').insert({
-      full_name: fullName, email, phone, work_interest: workInterest, availability,
-      preferred_locations: preferredLocations, notes: text(body.notes, 1000), consent_at: now,
-      whatsapp_consent_at: whatsappConsent ? now : null, source: 'website_worker', campaign: 'meta_worker_gig_preview',
-      qualification_status: whatsappConsent ? 'queued' : 'new',
-    }).select('id').single();
-    if (error || !data?.id) return jsonResponse({ ok: false, message: 'Unable to submit right now.' }, 500);
-    leadId = data.id;
+    if (serviceKey) {
+      const { data, error } = await supabase.from('worker_interest_leads').insert({
+        full_name: fullName, email, phone, work_interest: workInterest, availability,
+        preferred_locations: preferredLocations, notes: text(body.notes, 1000), consent_at: now,
+        whatsapp_consent_at: whatsappConsent ? now : null, source: 'website_worker', campaign: 'meta_worker_gig_preview',
+        qualification_status: whatsappConsent ? 'queued' : 'new',
+      }).select('id').single();
+      if (error || !data?.id) return jsonResponse({ ok: false, message: 'Unable to submit right now.' }, 500);
+      leadId = data.id;
+    } else {
+      const { data, error } = await supabase.rpc('submit_worker_interest_public', {
+        p_full_name: fullName, p_email: email, p_phone: phone, p_work_interest: workInterest,
+        p_availability: availability, p_preferred_locations: preferredLocations, p_pdpa_consent: pdpaConsent,
+        p_notes: text(body.notes, 1000), p_source: 'website_worker', p_campaign: 'meta_worker_gig_preview',
+        p_whatsapp_consent: whatsappConsent,
+      });
+      if (error || !data?.lead_id) return jsonResponse({ ok: false, message: 'Unable to submit right now.' }, 500);
+      leadId = data.lead_id as string;
+      qualificationAlreadyQueued = data.qualification_queued === true;
+    }
   }
 
   if (whatsappConsent && leadId && !qualificationAlreadyQueued) {
